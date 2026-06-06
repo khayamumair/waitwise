@@ -459,9 +459,9 @@ def _extract_tool_calls(content: str) -> list[dict]:
 @app.post("/v1/chat/completions")
 async def proxy_chat(request: Request):
     """
-    Forward an OpenAI chat-completions call to Nemotron (vLLM). When the request
-    carries tools, normalise Nemotron's <toolcall> text into proper OpenAI
-    tool_calls so ElevenLabs (and any OpenAI client) can use them.
+    Forward an OpenAI chat-completions call to Nemotron (vLLM), fast passthrough
+    streaming. Logs the request shape + any upstream error for debugging the
+    ElevenLabs custom-LLM link.
     """
     base = llm_config.BASE_URL
     if not base:
@@ -471,66 +471,39 @@ async def proxy_chat(request: Request):
         payload = json.loads(raw or b"{}")
     except Exception:
         payload = {}
-    wants_stream = bool(payload.get("stream"))
-    has_tools = bool(payload.get("tools"))
+
+    # Clamp max_tokens: clients (ElevenLabs sends 8192) can exceed the model's
+    # context window and vLLM 400s. Keep output well under max_model_len.
+    cap = int(os.getenv("WAITWISE_PROXY_MAX_TOKENS", "512"))
+    mt = payload.get("max_tokens")
+    if not isinstance(mt, int) or mt <= 0 or mt > cap:
+        payload["max_tokens"] = cap
+    raw = json.dumps(payload).encode()
+
+    print(f"[proxy] msgs={len(payload.get('messages', []))} stream={payload.get('stream')} "
+          f"tools={len(payload.get('tools', []))} max_tokens->{payload.get('max_tokens')}", flush=True)
     url = f"{base}/chat/completions"
     headers = {"Content-Type": "application/json", "Authorization": "Bearer EMPTY"}
+    wants_stream = bool(payload.get("stream"))
 
-    # No tools -> cheap passthrough, preserve real token streaming for low latency.
-    if not has_tools:
-        if wants_stream:
-            async def gen():
-                async with httpx.AsyncClient(timeout=None) as client:
-                    async with client.stream("POST", url, content=raw, headers=headers) as r:
-                        async for chunk in r.aiter_bytes():
-                            yield chunk
-            return StreamingResponse(gen(), media_type="text/event-stream")
-        async with httpx.AsyncClient(timeout=120) as client:
-            r = await client.post(url, content=raw, headers=headers)
-            return JSONResponse(status_code=r.status_code, content=r.json())
+    if wants_stream:
+        async def gen():
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("POST", url, content=raw, headers=headers) as r:
+                    if r.status_code != 200:
+                        err = await r.aread()
+                        print(f"[proxy] upstream {r.status_code}: {err[:400]!r}", flush=True)
+                        yield f"data: {json.dumps({'error': err.decode('utf-8', 'replace')[:400]})}\n\n".encode()
+                        return
+                    async for chunk in r.aiter_bytes():
+                        yield chunk
+        return StreamingResponse(gen(), media_type="text/event-stream")
 
-    # Tools present -> get the full completion, then normalise tool calls.
-    upstream = {**payload, "stream": False}
     async with httpx.AsyncClient(timeout=120) as client:
-        r = await client.post(url, json=upstream, headers=headers)
-        data = r.json()
-    if "choices" not in data:
-        return JSONResponse(status_code=r.status_code, content=data)  # forward errors
-
-    choice = data["choices"][0]
-    msg = choice.get("message", {})
-    content = msg.get("content") or ""
-    if not msg.get("tool_calls"):
-        tcs = _extract_tool_calls(content)
-        if tcs:
-            msg["tool_calls"] = tcs
-            msg["content"] = None
-            choice["finish_reason"] = "tool_calls"
-
-    if not wants_stream:
-        return JSONResponse(status_code=200, content=data)
-
-    # Wrap the (normalised) result as an OpenAI streaming response.
-    def _chunk(delta: dict, finish):
-        return "data: " + json.dumps({
-            "id": data.get("id", "chatcmpl-proxy"),
-            "object": "chat.completion.chunk",
-            "created": data.get("created", 0),
-            "model": data.get("model", payload.get("model", "")),
-            "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
-        }) + "\n\n"
-
-    async def gen():
-        if msg.get("tool_calls"):
-            delta_tcs = [{"index": i, **tc} for i, tc in enumerate(msg["tool_calls"])]
-            yield _chunk({"role": "assistant", "tool_calls": delta_tcs}, None)
-            yield _chunk({}, "tool_calls")
-        else:
-            yield _chunk({"role": "assistant", "content": content}, None)
-            yield _chunk({}, choice.get("finish_reason", "stop"))
-        yield "data: [DONE]\n\n"
-
-    return StreamingResponse(gen(), media_type="text/event-stream")
+        r = await client.post(url, content=raw, headers=headers)
+        if r.status_code != 200:
+            print(f"[proxy] upstream {r.status_code}: {r.text[:400]!r}", flush=True)
+        return JSONResponse(status_code=r.status_code, content=r.json())
 
 
 @app.get("/insights")
