@@ -1,12 +1,12 @@
 """
-triage.py — Triage Agent
+triage.py - Triage Agent
 Retrieves relevant NHS rules from ChromaDB, then calls the LLM (Nemotron on the
 DGX Spark via vLLM, or the local mock) to assess each flagged patient.
 
 v2: the cohort is now hundreds of patients, not three. Two changes make that
 viable:
   1. The embedding model + Chroma client are loaded ONCE, not per patient.
-  2. Triage runs as a CONCURRENT BATCH (ThreadPoolExecutor) — on vLLM this is
+  2. Triage runs as a CONCURRENT BATCH (ThreadPoolExecutor) - on vLLM this is
      what drives continuous batching and the live GPU-utilisation spike.
 
 The serving backend is chosen entirely by llm_config (WAITWISE_LLM env var).
@@ -134,7 +134,7 @@ JSON only, no extra text."""
 def _assess_one(patient: dict, retriever) -> tuple[dict, str | None]:
     """
     Retrieve + assess a single patient. Safe to run in a worker thread.
-    Returns (assessment, fallback_error) — fallback_error is None on success, or
+    Returns (assessment, fallback_error) - fallback_error is None on success, or
     the exception name if the LLM call failed and we fell back to the mock.
     """
     llm_config.mock_pace()  # watchable demo pacing (no-op for real backends)
@@ -144,7 +144,7 @@ def _assess_one(patient: dict, retriever) -> tuple[dict, str | None]:
         context = retriever.context_for(patient)
         return _llm_triage(patient, context), None
     except Exception as e:
-        # Never let one unreachable/garbled LLM response crash the cohort —
+        # Never let one unreachable/garbled LLM response crash the cohort -
         # fall back to the deterministic mock, but report it loudly.
         assessment = _mock_triage(patient, "")
         assessment["reason"] = f"[fallback: {type(e).__name__}] " + assessment["reason"]
@@ -250,7 +250,7 @@ def run(state: dict) -> dict:
     rate = round(len(results) / (elapsed_ms / 1000), 1) if elapsed_ms else len(results)
     event("triage", "result",
           f"Triage batch complete: {len(results)} patients assessed in {elapsed_ms} ms "
-          f"(~{rate}/s) — {n_high} confirmed HIGH risk.",
+          f"(~{rate}/s) - {n_high} confirmed HIGH risk.",
           n_triaged=len(results), n_high=n_high, elapsed_ms=elapsed_ms)
 
     con.close()

@@ -1,5 +1,5 @@
 """
-ingest.py — run once before anything else.
+ingest.py - run once before anything else.
 Loads all CSVs into DuckDB and embeds RAG docs into ChromaDB.
 """
 
@@ -31,7 +31,7 @@ def load_duckdb():
         "lookup_conditions":   "lookup_conditions.csv",
         "lookup_languages":    "lookup_languages.csv",
         "lookup_referral_types": "lookup_referral_types.csv",
-        # These start empty — pipeline writes to them
+        # These start empty - pipeline writes to them
         "triage_results":      "triage_results.csv",
         "scan_runs":           "scan_runs.csv",
         "communications":      "communications.csv",

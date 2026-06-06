@@ -1,5 +1,5 @@
 """
-api.py — FastAPI backend
+api.py - FastAPI backend
 Three endpoints Khayam needs:
 
   POST /scan               triggers the pipeline, returns scan_run_id immediately
@@ -12,6 +12,7 @@ Three endpoints Khayam needs:
 import asyncio
 import duckdb
 import json
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import os
@@ -72,7 +73,7 @@ def trigger_scan(req: ScanRequest):
     if not coord:
         raise HTTPException(status_code=403, detail="Unknown or inactive coordinator")
 
-    # We need the scan_id before the thread starts — generate it here
+    # We need the scan_id before the thread starts - generate it here
     from datetime import datetime, timezone
     scan_id = f"SCAN{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
     event_queue = []
@@ -249,7 +250,121 @@ def approve(triage_id: str, req: ApproveRequest):
         [triage_id]
     )
     con.close()
+    _record_audit({"actor": req.coordinator_id, "action": "approve", "triage_id": triage_id,
+                   "detail": "Coordinator approved the triage + communications."})
     return {"approved": True, "triage_id": triage_id, "timestamp": now}
+
+
+# ---------- Audit trail (every coordinator / GP / voice action) ----------
+
+AUDIT_LOG_PATH = Path(__file__).parent / "db" / "audit_log.jsonl"
+_AUDIT: list[dict] = []
+
+
+class AuditEntry(BaseModel):
+    actor: str
+    action: str
+    patient_id: str | None = None
+    triage_id: str | None = None
+    detail: str | None = None
+
+
+def _record_audit(entry: dict) -> dict:
+    """Append an immutable audit record (in-memory + JSONL file for the record)."""
+    rec = {
+        "id": f"AUD{uuid.uuid4().hex[:8].upper()}",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        **entry,
+    }
+    _AUDIT.append(rec)
+    try:
+        with open(AUDIT_LOG_PATH, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+    except Exception:
+        pass
+    return rec
+
+
+@app.post("/audit")
+def post_audit(e: AuditEntry):
+    """Log an action from the UI (approve, escalate, GP accept/action/note)."""
+    return _record_audit(e.model_dump())
+
+
+@app.get("/audit")
+def get_audit(limit: int = 200):
+    """Full action history, newest first - powers the Activity / audit-trail view."""
+    return {"events": list(reversed(_AUDIT[-limit:]))}
+
+
+# ---------- Voice check-in agent (ElevenLabs + Nemotron) ----------
+
+_voice_done: set[str] = set()
+
+
+class VoiceOutcome(BaseModel):
+    patient_id: str
+    still_waiting: bool | None = None
+    deterioration: bool | None = None
+    summary: str = ""
+    transcript: str | None = None
+
+
+@app.get("/voice/next-patient")
+def voice_next_patient():
+    """
+    Hand the voice agent the next voice-suitable, flagged patient to call, with a
+    suggested opening line. Tracks who has been called this session.
+    """
+    con = duckdb.connect(DB_PATH, read_only=True)
+    rows = con.execute("""
+        SELECT patient_id, name, age, condition, wait_weeks, borough,
+               imd_quintile, primary_language, ever_contacted, days_since_contact
+        FROM patients
+        WHERE voice_checkin_suitable = TRUE AND flagged = TRUE
+        ORDER BY risk_score DESC
+        LIMIT 100
+    """).df().to_dict("records")
+    con.close()
+    nxt = next((r for r in rows if r["patient_id"] not in _voice_done), None)
+    if not nxt:
+        return {"done": True, "message": "No more voice-suitable patients in this batch."}
+    _voice_done.add(nxt["patient_id"])
+    first = str(nxt["name"]).split()[0]
+    opening = (
+        f"Hello, this is the NHS waiting list coordination team calling for {first}. "
+        f"Our records show you've been waiting about {nxt['wait_weeks']} weeks for {nxt['condition']}. "
+        f"I'd like to check three quick things: are you still waiting for this appointment, "
+        f"has anything about your condition got worse, and are your contact details still up to date?"
+    )
+    return {"done": False, "patient": _clean(nxt), "suggested_opening": opening}
+
+
+@app.post("/voice/outcome")
+def voice_outcome(o: VoiceOutcome):
+    """Record the result of a voice check-in into the audit trail."""
+    bits = []
+    if o.still_waiting is not None:
+        bits.append("still waiting" if o.still_waiting else "no longer needs appointment")
+    if o.deterioration:
+        bits.append("DETERIORATION REPORTED")
+    if o.summary:
+        bits.append(o.summary)
+    detail = "; ".join(bits) or "Check-in completed."
+    rec = _record_audit({
+        "actor": "voice-agent",
+        "action": "voice_checkin",
+        "patient_id": o.patient_id,
+        "detail": detail,
+    })
+    return {"recorded": True, "audit_id": rec["id"]}
+
+
+@app.get("/voice/session-log")
+def voice_session_log():
+    """Voice-agent session log (for the ElevenLabs bounty submission)."""
+    voice = [e for e in _AUDIT if e.get("actor") == "voice-agent"]
+    return {"count": len(voice), "events": voice}
 
 
 @app.get("/insights")
@@ -257,7 +372,7 @@ def get_insights():
     """
     Cohort-level, non-obvious findings over the whole waiting list (RTT breaches,
     pathway-event blind spots, the deprivation/DNA gradient, borough hotspots).
-    Independent of any scan — loads immediately for the dashboard insight panel.
+    Independent of any scan - loads immediately for the dashboard insight panel.
     """
     try:
         return cohort_insights.compute_insights()

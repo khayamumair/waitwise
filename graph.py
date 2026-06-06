@@ -1,5 +1,5 @@
 """
-graph.py — LangGraph pipeline
+graph.py - LangGraph pipeline
 Defines the Monitor → Triage → Communication flow as a state graph.
 Each node is one of the agent run() functions.
 
@@ -18,7 +18,7 @@ from agents import monitor, triage, communication
 
 DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent / "db" / "waitwise.db"))
 
-# Module-level store — agents import and write to this directly
+# Module-level store - agents import and write to this directly
 EVENT_QUEUES: dict[str, list] = {}
 
 

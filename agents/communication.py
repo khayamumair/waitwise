@@ -1,9 +1,9 @@
 """
-communication.py — Communication Agent
+communication.py - Communication Agent
 Generates a coordinator memo and patient letter for each HIGH-risk patient.
 
 v2: drafting runs as a concurrent batch (same ThreadPoolExecutor pattern as
-triage), and only the high-risk cohort gets letters — that is where a coordinator
+triage), and only the high-risk cohort gets letters - that is where a coordinator
 actually acts, and it keeps the GPU budget focused. Backend chosen by llm_config.
 """
 
@@ -23,7 +23,7 @@ DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent.parent / "db" 
 DRAFTED_EVENT_SAMPLE = 8
 
 # Cap on how many high-risk patients get memo+letter drafts per scan. 0 = all.
-# Each patient = 2 LLM calls, so this is the heaviest stage on a real model —
+# Each patient = 2 LLM calls, so this is the heaviest stage on a real model -
 # cap it for a snappy live demo (the highest-risk patients are drafted first).
 COMMS_CAP = int(os.getenv("WAITWISE_COMMS_CAP", "0"))
 
@@ -34,13 +34,13 @@ def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
     contacted = patient.get("ever_contacted", True)
     imd = patient.get("imd_quintile", 5)
     risks = [
-        f"{wait}-week wait" + (" — 52-week RTT breach" if wait > 52 else " — past 18-week standard" if wait >= 18 else ""),
+        f"{wait}-week wait" + (" - 52-week RTT breach" if wait > 52 else " - past 18-week standard" if wait >= 18 else ""),
         "Never contacted by the service" if not contacted else "Limited recent contact",
-        f"IMD quintile {imd}" + (" — most deprived decile" if imd == 1 else ""),
+        f"IMD quintile {imd}" + (" - most deprived decile" if imd == 1 else ""),
     ]
     memo = (
-        f"SUMMARY: {'URGENT — ' if triage['risk_level'] == 'high' else ''}"
-        f"{patient['name']} ({patient['patient_id']}), age {patient['age']}, {patient['condition']} — "
+        f"SUMMARY: {'URGENT - ' if triage['risk_level'] == 'high' else ''}"
+        f"{patient['name']} ({patient['patient_id']}), age {patient['age']}, {patient['condition']} - "
         f"{triage['risk_level'].upper()} risk (score {triage['risk_score']}).\n"
         f"KEY RISKS:\n" + "\n".join(f"- {r}" for r in risks) + "\n"
         f"RECOMMENDED ACTION: {triage['recommended_action']}."
@@ -63,14 +63,14 @@ def _llm_comms(patient: dict, triage: dict) -> tuple[str, str]:
     memo_prompt = f"""Write a concise internal coordinator memo for this NHS patient flagged by WaitWise.
 Use EXACTLY this structure and nothing else (no preamble):
 
-SUMMARY: one sentence — who, what, risk level.
+SUMMARY: one sentence - who, what, risk level.
 KEY RISKS:
 - short bullet
 - short bullet
 - short bullet
 RECOMMENDED ACTION: one sentence.
 
-Be clinical; lead with "URGENT —" in the summary if risk is high.
+Be clinical; lead with "URGENT -" in the summary if risk is high.
 
 Patient: {patient['name']}, age {patient['age']}, {patient['condition']}, {patient['wait_weeks']} weeks wait.
 Risk: {triage['risk_level'].upper()} (score {triage['risk_score']}).
@@ -119,7 +119,7 @@ def run(state: dict) -> dict:
 
     patient_by_pid = {p["patient_id"]: p for p in state["flagged_patients"]}
 
-    # Only draft for HIGH-risk patients — that is where coordinators act.
+    # Only draft for HIGH-risk patients - that is where coordinators act.
     targets = [t for t in state["triage_results"] if t["risk_level"] == "high"]
     targets.sort(key=lambda t: t["risk_score"], reverse=True)
     if COMMS_CAP > 0:

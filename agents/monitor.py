@@ -1,5 +1,5 @@
 """
-monitor.py — Monitor Agent
+monitor.py - Monitor Agent
 No LLM. Pure SQL against DuckDB.
 
 v2: scans all ~10k patients and surfaces the FULL flagged cohort (~1,240), then
@@ -31,11 +31,11 @@ TRIAGE_MEDIUM_CAP = int(os.getenv("WAITWISE_TRIAGE_MEDIUM_CAP", "25"))
 
 # Cap on HIGH-band patients triaged live. 0 = all of them. On a real model the
 # full high cohort (hundreds) is too slow for a live demo, so cap it and show the
-# rest as "queued" — honest tiering. The mock leaves this at 0 (does everything).
+# rest as "queued" - honest tiering. The mock leaves this at 0 (does everything).
 TRIAGE_HIGH_CAP = int(os.getenv("WAITWISE_TRIAGE_HIGH_CAP", "0"))
 
 # How many individual FLAG events to stream to the live trace (the rest are
-# summarised — streaming 1,240 lines would flood the UI).
+# summarised - streaming 1,240 lines would flood the UI).
 FLAG_EVENT_SAMPLE = 8
 
 
@@ -43,9 +43,9 @@ def run(state: dict) -> dict:
     """
     state keys consumed: scan_run_id
     state keys produced:
-        flagged_patients  — the Tier-2 slice to triage (high + top medium)
-        cohort_summary    — counts for the dashboard header
-        cohort_queue      — lightweight rows for the full flagged queue
+        flagged_patients  - the Tier-2 slice to triage (high + top medium)
+        cohort_summary    - counts for the dashboard header
+        cohort_queue      - lightweight rows for the full flagged queue
         total_scanned
     """
     con = duckdb.connect(DB_PATH)
@@ -73,12 +73,12 @@ def run(state: dict) -> dict:
     event("monitor", "rule_check", "RTT rule: 18-week breach (the constitutional standard) (+1 point)")
     event("monitor", "rule_check", "Scoring rule: imd_quintile = 1 AND wait_weeks > 26 AND ever_contacted = FALSE (+2 points)")
     event("monitor", "rule_check", "Scoring rule: pathway_changed = TRUE AND wait_weeks > 20 (+1 point)")
-    event("monitor", "rule_check", "Checking contact log quality — penalising failed contact attempts")
+    event("monitor", "rule_check", "Checking contact log quality - penalising failed contact attempts")
 
     # Rank the ENTIRE flagged cohort. We lean on the precomputed risk_band/flag_*
     # columns for the cohort story, and add an auditable rule score for ranking
     # that now includes the RTT clock (the 18/52-week validation bands NHS trusts
-    # actually manage to — see waitwise_patient_workflow.md §1.2, §6.1).
+    # actually manage to - see waitwise_patient_workflow.md §1.2, §6.1).
     cohort = con.execute("""
         WITH rtt AS (
             -- one row per patient; a patient can have several waiting-list clocks
@@ -171,7 +171,7 @@ def run(state: dict) -> dict:
     for p in flagged_patients[:FLAG_EVENT_SAMPLE]:
         event(
             "monitor", "flag",
-            f"FLAGGED: {p['patient_id']} — {p['risk_band'].upper()} band, "
+            f"FLAGGED: {p['patient_id']} - {p['risk_band'].upper()} band, "
             f"{p['wait_weeks']}wk wait, ever_contacted={p['ever_contacted']}, "
             f"IMD Q{p['imd_quintile']} {p['borough']}",
             patient_id=p["patient_id"],
@@ -179,7 +179,7 @@ def run(state: dict) -> dict:
 
     event(
         "monitor", "cohort_summary",
-        f"{n_flagged:,} coordination failures flagged of {total:,} scanned — "
+        f"{n_flagged:,} coordination failures flagged of {total:,} scanned - "
         f"{n_high} high · {n_medium} medium · {n_low} low. "
         f"{n_breach_52:,} are 52-week RTT breaches, {n_breach_18:,} past the 18-week standard. "
         f"Routing {len(flagged_patients)} (all high + top {len(medium_ids)} medium) to GPU triage.",

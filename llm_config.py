@@ -1,10 +1,10 @@
 """
-llm_config.py — single source of truth for LLM serving.
+llm_config.py - single source of truth for LLM serving.
 
 The whole point of this module: switching from the local mock to Nemotron on the
 DGX Spark is a ONE environment-variable change, with zero code edits in the agents.
 
-    WAITWISE_LLM=mock      # default — deterministic, instant, no server needed
+    WAITWISE_LLM=mock      # default - deterministic, instant, no server needed
     WAITWISE_LLM=nemotron  # vLLM/NIM serving Nemotron on the Spark (OpenAI-compatible)
     WAITWISE_LLM=ollama    # local llama3.2 via Ollama (dev fallback)
 
@@ -43,7 +43,7 @@ def _resolve_backend() -> str:
     Pick the serving backend.
 
     Precedence:
-      1. WAITWISE_LLM (mock|nemotron|ollama) — this module's explicit switch.
+      1. WAITWISE_LLM (mock|nemotron|ollama) - this module's explicit switch.
       2. The dgxsetup convention (MOCK_LLM + VLLM_*): MOCK_LLM=false means "use the
          vLLM/Nemotron server", so map it onto the `nemotron` backend. This keeps
          the colleague's DGX run scripts working without changes.
@@ -76,7 +76,7 @@ BASE_URL = _CFG["base_url"]
 MAX_CONCURRENCY = int(os.getenv("WAITWISE_MAX_CONCURRENCY", "16"))
 
 # Mock-only: per-assessment delay so a scan takes a few watchable seconds instead
-# of flashing past in 0.5s — lets the live trace stream and the GPU curve spike on
+# of flashing past in 0.5s - lets the live trace stream and the GPU curve spike on
 # screen. Real backends ignore this (their latency is real). Tests set it to 0.
 MOCK_DELAY_MS = int(os.getenv("WAITWISE_MOCK_DELAY_MS", "8"))
 

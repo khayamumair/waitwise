@@ -1,10 +1,10 @@
 """
-gpu_monitor.py — GPU utilisation telemetry for the dashboard.
+gpu_monitor.py - GPU utilisation telemetry for the dashboard.
 
 On the DGX Spark this reads real stats (pynvml, falling back to nvidia-smi).
 Locally (mock mode) it synthesises an HONEST-shaped curve: idle at baseline,
 spiking to near-saturation while a scan's triage/comms batch is in flight, then
-decaying back. The point is that the live counter actually MOVES during a scan —
+decaying back. The point is that the live counter actually MOVES during a scan -
 the same telemetry plumbing lights up for real once Nemotron serves on the Spark.
 
 The pipeline calls mark_busy()/mark_idle() around the GPU-heavy stages.
@@ -24,7 +24,7 @@ _IDLE_UTIL = 6
 _BUSY_UTIL = 92
 _RAMP_SECONDS = 1.2  # how fast util climbs/decays
 
-# Peak measured aggregate generation throughput (tok/s) — used to map real vLLM
+# Peak measured aggregate generation throughput (tok/s) - used to map real vLLM
 # throughput onto the 0-100 utilisation bar. Override with WAITWISE_PEAK_TOKS.
 _PEAK_TOKS = float(os.getenv("WAITWISE_PEAK_TOKS", "410"))
 
@@ -82,12 +82,12 @@ class GpuMonitor:
 
     # --- telemetry --------------------------------------------------------
     def snapshot(self) -> dict:
-        # 1. Real local GPU (backend running ON the DGX) — most direct.
+        # 1. Real local GPU (backend running ON the DGX) - most direct.
         if self._pynvml is not None:
             real = self._real_snapshot()
             if real is not None:
                 return real
-        # 2. Real DGX inference activity scraped from vLLM /metrics — works even
+        # 2. Real DGX inference activity scraped from vLLM /metrics - works even
         #    when the backend is on the laptop and the model is on the Spark.
         if not llm_config.is_mock() and self._metrics_url:
             vm = self._vllm_metrics_snapshot()
