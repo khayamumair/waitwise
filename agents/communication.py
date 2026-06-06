@@ -15,15 +15,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import graph as g
 
 DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
-# --- Set to False when running on the DGX Spark with vLLM --
-# MOCK_LLM = True
-# VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
-# VLLM_MODEL = os.getenv("VLLM_MODEL", "nvidia/Nemotron-Mini-4B-Instruct")
-
-# Version for testing on local LLM
-MOCK_LLM = False
-VLLM_BASE_URL = "http://localhost:11434/v1"
-VLLM_MODEL = "llama3.2:3b"
+MOCK_LLM = os.getenv("MOCK_LLM", "false").lower() == "true"
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:11434/v1")
+VLLM_MODEL    = os.getenv("VLLM_MODEL",    "llama3.2:3b")
 
 
 def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
