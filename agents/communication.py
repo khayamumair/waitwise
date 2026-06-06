@@ -87,24 +87,33 @@ Borough: {patient.get('borough', '')}
 
 Write the letter only."""
 
-    def call(prompt):
+    def call(prompt, max_tokens):
         r = client.chat.completions.create(
             model=llm_config.MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
-            max_tokens=300,
+            max_tokens=max_tokens,
         )
-        return r.choices[0].message.content.strip()
+        return (r.choices[0].message.content or "").strip()
 
-    return call(memo_prompt), call(letter_prompt)
+    # Letter gets more room so it doesn't truncate mid-sentence.
+    return call(memo_prompt, 280), call(letter_prompt, 480)
 
 
 def _draft_one(patient: dict, triage: dict) -> tuple[str, str]:
     llm_config.mock_pace()  # watchable demo pacing (no-op for real backends)
+    mock_memo, mock_letter = _mock_comms(patient, triage)
+    if llm_config.is_mock():
+        return mock_memo, mock_letter
     try:
-        return _mock_comms(patient, triage) if llm_config.is_mock() else _llm_comms(patient, triage)
+        memo, letter = _llm_comms(patient, triage)
     except Exception:
-        return _mock_comms(patient, triage)
+        return mock_memo, mock_letter
+    # Never store an empty memo/letter - fall back to the deterministic version
+    # per field if the model returned blank/whitespace.
+    memo = (memo or "").strip() or mock_memo
+    letter = (letter or "").strip() or mock_letter
+    return memo, letter
 
 
 def run(state: dict) -> dict:
