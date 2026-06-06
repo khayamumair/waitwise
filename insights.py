@@ -9,9 +9,10 @@ list failing" view, not the "who do I call first" view.
 """
 
 import duckdb
+import os
 from pathlib import Path
 
-DB_PATH = str(Path(__file__).parent / "db" / "waitwise.db")
+DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent / "db" / "waitwise.db"))
 
 
 def _q(con, sql, params=None):

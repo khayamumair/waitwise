@@ -18,7 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import graph as g
 import llm_config
 
-DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
+DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent.parent / "db" / "waitwise.db"))
 
 DRAFTED_EVENT_SAMPLE = 8
 
@@ -29,14 +29,21 @@ COMMS_CAP = int(os.getenv("WAITWISE_COMMS_CAP", "0"))
 
 
 def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
-    """Deterministic mock output. Mirrors format in communications.csv."""
+    """Deterministic mock output. Structured, scannable memo."""
+    wait = patient.get("wait_weeks", 0)
+    contacted = patient.get("ever_contacted", True)
+    imd = patient.get("imd_quintile", 5)
+    risks = [
+        f"{wait}-week wait" + (" — 52-week RTT breach" if wait > 52 else " — past 18-week standard" if wait >= 18 else ""),
+        "Never contacted by the service" if not contacted else "Limited recent contact",
+        f"IMD quintile {imd}" + (" — most deprived decile" if imd == 1 else ""),
+    ]
     memo = (
-        f"{'URGENT — ' if triage['risk_level'] == 'high' else ''}"
-        f"{patient['name']} ({patient['patient_id']}), age {patient['age']}, {patient['condition']}. "
-        f"Patient has been on the waiting list for {patient['wait_weeks']} weeks. "
-        f"Risk assessment: {triage['risk_level'].upper()} (score {triage['risk_score']}). "
-        f"Recommended action: {triage['recommended_action']}. "
-        f"Reason: {triage['reason']}"
+        f"SUMMARY: {'URGENT — ' if triage['risk_level'] == 'high' else ''}"
+        f"{patient['name']} ({patient['patient_id']}), age {patient['age']}, {patient['condition']} — "
+        f"{triage['risk_level'].upper()} risk (score {triage['risk_score']}).\n"
+        f"KEY RISKS:\n" + "\n".join(f"- {r}" for r in risks) + "\n"
+        f"RECOMMENDED ACTION: {triage['recommended_action']}."
     )
     first_name = patient.get('name', 'Patient').split()[0]
     letter = (
@@ -53,15 +60,22 @@ def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
 def _llm_comms(patient: dict, triage: dict) -> tuple[str, str]:
     client = llm_config.get_client()
 
-    memo_prompt = f"""Write an internal coordinator memo for the following NHS patient flagged by the WaitWise system.
-Be clinical, urgent if risk is high, and concise.
+    memo_prompt = f"""Write a concise internal coordinator memo for this NHS patient flagged by WaitWise.
+Use EXACTLY this structure and nothing else (no preamble):
+
+SUMMARY: one sentence — who, what, risk level.
+KEY RISKS:
+- short bullet
+- short bullet
+- short bullet
+RECOMMENDED ACTION: one sentence.
+
+Be clinical; lead with "URGENT —" in the summary if risk is high.
 
 Patient: {patient['name']}, age {patient['age']}, {patient['condition']}, {patient['wait_weeks']} weeks wait.
 Risk: {triage['risk_level'].upper()} (score {triage['risk_score']}).
 Reason: {triage['reason']}
-Recommended action: {triage['recommended_action']}
-
-Write the memo only."""
+Recommended action: {triage['recommended_action']}"""
 
     letter_prompt = f"""Write a compassionate, plain-English letter to an NHS patient who has been waiting for treatment.
 Do not alarm them. Explain that a coordinator will be in touch.
