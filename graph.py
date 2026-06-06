@@ -28,6 +28,8 @@ class PipelineState(TypedDict):
     triage_results: list
     communications: list
     total_scanned: int
+    cohort_queue: list
+    cohort_summary: dict
 
 
 def build_graph():
@@ -77,6 +79,8 @@ def run_pipeline(
         "triage_results": [],
         "communications": [],
         "total_scanned": 0,
+        "cohort_queue": [],
+        "cohort_summary": {},
     }
 
     graph = build_graph()
@@ -85,7 +89,9 @@ def run_pipeline(
     # Update scan_runs row at end
     end_time = datetime.now(timezone.utc)
     total_ms = int((end_time - start_time).total_seconds() * 1000)
-    n_flagged = len(final_state["flagged_patients"])
+    summary = final_state.get("cohort_summary", {})
+    # Full flagged cohort (not just the triaged slice) is the headline number.
+    n_flagged = summary.get("n_flagged", len(final_state["flagged_patients"]))
     n_high = sum(1 for t in final_state["triage_results"] if t["risk_level"] == "high")
     n_medium = sum(1 for t in final_state["triage_results"] if t["risk_level"] == "medium")
 

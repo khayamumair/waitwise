@@ -12,8 +12,6 @@ Three endpoints Khayam needs:
 import asyncio
 import duckdb
 import json
-import os
-import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,9 +22,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import graph as pipeline
+import llm_config
+from gpu_monitor import MONITOR as gpu
 
 DB_PATH = str(Path(__file__).parent / "db" / "waitwise.db")
-MOCK_GPU = os.getenv("MOCK_GPU", "true").lower() == "true"
 
 app = FastAPI(title="WaitWise API")
 
@@ -78,6 +77,7 @@ def trigger_scan(req: ScanRequest):
     _active_runs[scan_id] = {"event_queue": event_queue, "state": None, "done": False}
 
     def _run():
+        gpu.mark_busy()  # drives the live GPU-utilisation curve during the scan
         try:
             state = pipeline.run_pipeline(
                 coordinator_id=req.coordinator_id,
@@ -90,6 +90,7 @@ def trigger_scan(req: ScanRequest):
             _active_runs[scan_id]["error"] = traceback.format_exc()
             print(f"\n ERROR in pipeline for {scan_id}:\n{traceback.format_exc()}")
         finally:
+            gpu.mark_idle()
             _active_runs[scan_id]["done"] = True
 
     _executor.submit(_run)
@@ -189,8 +190,17 @@ def get_results(scan_id: str):
             "communications": comm_map.get(pid, {}),
         })
 
+    # Cohort summary + full flagged queue come from the in-memory run state
+    # (set by the pipeline thread). Degrade gracefully if the run has been GC'd.
+    run = _active_runs.get(scan_id, {})
+    state = run.get("state") or {}
+    cohort_summary = state.get("cohort_summary", {})
+    cohort_queue = state.get("cohort_queue", [])
+
     return _clean({
         "scan_run": scan_run[0] if scan_run else {},
+        "cohort_summary": cohort_summary,
+        "cohort_queue": cohort_queue,
         "flagged_cases": results,
     })
 
@@ -235,24 +245,13 @@ def approve(triage_id: str, req: ApproveRequest):
 @app.get("/gpu")
 def gpu_status():
     """
-    Returns current GPU utilisation.
-    On the DGX Spark this calls nvidia-smi.
-    Set MOCK_GPU=false in your environment when running on real hardware.
-    """
-    if MOCK_GPU:
-        return {"gpu_utilisation_pct": 67, "vram_used_gb": 8.4, "device": "Mock (DGX Spark GB10)"}
+    Current GPU utilisation for the live counter widget.
 
-    try:
-        result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,name",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=3
-        )
-        util, mem_mb, name = result.stdout.strip().split(", ")
-        return {
-            "gpu_utilisation_pct": int(util),
-            "vram_used_gb": round(int(mem_mb) / 1024, 1),
-            "device": name,
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    Real stats (pynvml / nvidia-smi) on the DGX Spark; a scan-driven simulated
+    curve locally. Either way the value moves while a scan is running. The active
+    serving backend (mock vs Nemotron) is reported so the panel labels itself.
+    """
+    snap = gpu.snapshot()
+    snap["llm"] = llm_config.describe()
+    snap["busy"] = gpu.busy
+    return snap
