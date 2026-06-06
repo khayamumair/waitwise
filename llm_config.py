@@ -24,11 +24,11 @@ _BACKENDS = {
         "label": "Mock (deterministic, no GPU)",
     },
     "nemotron": {
-        # vLLM / NIM expose an OpenAI-compatible server on the Spark.
-        # Model + URL confirmed by the dgxsetup branch (this is what the Spark serves).
+        # Any OpenAI-compatible server on the Spark: vLLM, NIM, or Ollama.
+        # Override VLLM_BASE_URL/VLLM_MODEL to match whatever you serve.
         "base_url": os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1"),
         "model": os.getenv("VLLM_MODEL", "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF"),
-        "label": "NVIDIA Nemotron 70B (vLLM on DGX Spark)",
+        "label": "NVIDIA Nemotron (DGX Spark, local)",
     },
     "ollama": {
         "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),

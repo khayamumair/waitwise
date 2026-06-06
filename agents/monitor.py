@@ -24,10 +24,15 @@ import graph as g
 
 DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
 
-# How many MEDIUM-band patients to triage with the full LLM pass, on top of every
-# HIGH-band patient. Keep small for a live demo on a real model; the mock is
-# instant so it can go higher. Set from Friday's tokens/sec benchmark.
+# How many MEDIUM-band patients to triage with the full LLM pass, on top of the
+# HIGH-band patients. Keep small for a live demo on a real model; the mock is
+# instant so it can go higher. Set from the tokens/sec benchmark.
 TRIAGE_MEDIUM_CAP = int(os.getenv("WAITWISE_TRIAGE_MEDIUM_CAP", "25"))
+
+# Cap on HIGH-band patients triaged live. 0 = all of them. On a real model the
+# full high cohort (hundreds) is too slow for a live demo, so cap it and show the
+# rest as "queued" — honest tiering. The mock leaves this at 0 (does everything).
+TRIAGE_HIGH_CAP = int(os.getenv("WAITWISE_TRIAGE_HIGH_CAP", "0"))
 
 # How many individual FLAG events to stream to the live trace (the rest are
 # summarised — streaming 1,240 lines would flood the UI).
@@ -103,8 +108,11 @@ def run(state: dict) -> dict:
     n_medium = int((cohort["risk_band"] == "medium").sum())
     n_low = int((cohort["risk_band"] == "low").sum())
 
-    # --- Tier-2 selection: every high + the top-N medium -------------------
-    high_ids = cohort.loc[cohort["risk_band"] == "high", "patient_id"].tolist()
+    # --- Tier-2 selection: high (optionally capped) + the top-N medium ------
+    high_series = cohort.loc[cohort["risk_band"] == "high", "patient_id"]
+    if TRIAGE_HIGH_CAP > 0:
+        high_series = high_series.head(TRIAGE_HIGH_CAP)
+    high_ids = high_series.tolist()
     medium_ids = cohort.loc[cohort["risk_band"] == "medium", "patient_id"].head(TRIAGE_MEDIUM_CAP).tolist()
     triage_ids = high_ids + medium_ids
 
