@@ -130,17 +130,24 @@ JSON only, no extra text."""
     return _parse_json(response.choices[0].message.content)
 
 
-def _assess_one(patient: dict, retriever) -> dict:
-    """Retrieve + assess a single patient. Safe to run in a worker thread."""
+def _assess_one(patient: dict, retriever) -> tuple[dict, str | None]:
+    """
+    Retrieve + assess a single patient. Safe to run in a worker thread.
+    Returns (assessment, fallback_error) — fallback_error is None on success, or
+    the exception name if the LLM call failed and we fell back to the mock.
+    """
     llm_config.mock_pace()  # watchable demo pacing (no-op for real backends)
-    context = "" if llm_config.is_mock() else retriever.context_for(patient)
+    if llm_config.is_mock():
+        return _mock_triage(patient, ""), None
     try:
-        assessment = _mock_triage(patient, context) if llm_config.is_mock() else _llm_triage(patient, context)
+        context = retriever.context_for(patient)
+        return _llm_triage(patient, context), None
     except Exception as e:
-        # Never let one bad LLM response crash the whole cohort.
-        assessment = _mock_triage(patient, context)
+        # Never let one unreachable/garbled LLM response crash the cohort —
+        # fall back to the deterministic mock, but report it loudly.
+        assessment = _mock_triage(patient, "")
         assessment["reason"] = f"[fallback: {type(e).__name__}] " + assessment["reason"]
-    return assessment
+        return assessment, type(e).__name__
 
 
 def run(state: dict) -> dict:
@@ -184,13 +191,28 @@ def run(state: dict) -> dict:
 
     # --- Concurrent batch: this is the GPU-saturating step --------------------
     assessments: list[tuple[dict, dict]] = []
+    fallbacks: dict[str, int] = {}
     workers = 1 if llm_config.is_mock() else llm_config.MAX_CONCURRENCY
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(_assess_one, p, retriever): p for p in patients}
         for fut in futures:
-            assessments.append((futures[fut], fut.result()))
+            assessment, fb = fut.result()
+            assessments.append((futures[fut], assessment))
+            if fb:
+                fallbacks[fb] = fallbacks.get(fb, 0) + 1
 
     elapsed_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
+
+    # Loud, honest warning if the real model wasn't actually used. Without this a
+    # scan silently degrades to mock when the DGX is unreachable.
+    n_fb = sum(fallbacks.values())
+    if n_fb and not llm_config.is_mock():
+        reasons = ", ".join(f"{k}×{v}" for k, v in fallbacks.items())
+        event("triage", "warning",
+              f"⚠ {n_fb}/{len(patients)} assessments did NOT reach {llm_config.LABEL} "
+              f"and fell back to the mock ({reasons}). Check the model server at "
+              f"{llm_config.BASE_URL}.",
+              n_fallback=n_fb)
 
     # --- Persist sequentially (single DuckDB connection) ----------------------
     results = []

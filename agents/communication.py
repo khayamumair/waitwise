@@ -8,6 +8,7 @@ actually acts, and it keeps the GPU budget focused. Backend chosen by llm_config
 """
 
 import duckdb
+import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -20,6 +21,11 @@ import llm_config
 DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
 
 DRAFTED_EVENT_SAMPLE = 8
+
+# Cap on how many high-risk patients get memo+letter drafts per scan. 0 = all.
+# Each patient = 2 LLM calls, so this is the heaviest stage on a real model —
+# cap it for a snappy live demo (the highest-risk patients are drafted first).
+COMMS_CAP = int(os.getenv("WAITWISE_COMMS_CAP", "0"))
 
 
 def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
@@ -102,6 +108,8 @@ def run(state: dict) -> dict:
     # Only draft for HIGH-risk patients — that is where coordinators act.
     targets = [t for t in state["triage_results"] if t["risk_level"] == "high"]
     targets.sort(key=lambda t: t["risk_score"], reverse=True)
+    if COMMS_CAP > 0:
+        targets = targets[:COMMS_CAP]
 
     def event(agent, event_type, message, patient_id="", **extra):
         evt = {
