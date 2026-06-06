@@ -22,13 +22,12 @@ VLLM_MODEL    = os.getenv("VLLM_MODEL",    "llama3.2:3b")
 
 def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
     """Deterministic mock output. Mirrors format in communications.csv."""
+    urgency = "URGENT — HIGH RISK" if triage['risk_level'] == 'high' else triage['risk_level'].upper()
     memo = (
-        f"{'URGENT — ' if triage['risk_level'] == 'high' else ''}"
-        f"{patient['name']} ({patient['patient_id']}), age {patient['age']}, {patient['condition']}. "
-        f"Patient has been on the waiting list for {patient['wait_weeks']} weeks. "
-        f"Risk assessment: {triage['risk_level'].upper()} (score {triage['risk_score']}). "
-        f"Recommended action: {triage['recommended_action']}. "
-        f"Reason: {triage['reason']}"
+        f"[{urgency}]\n"
+        f"Patient: {patient['name']} ({patient['patient_id']}) | Age {patient['age']} | {patient['condition']} | {patient['wait_weeks']} wks waiting\n"
+        f"Action:  {triage['recommended_action']}\n"
+        f"Reason:  {triage['reason']}"
     )
     first_name = patient.get('name', 'Patient').split()[0]
     letter = (
@@ -45,15 +44,19 @@ def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
 def _llm_comms(patient: dict, triage: dict) -> tuple[str, str]:
     client = OpenAI(base_url=VLLM_BASE_URL, api_key="EMPTY")
 
-    memo_prompt = f"""Write an internal coordinator memo for the following NHS patient flagged by the WaitWise system.
-Be clinical, urgent if risk is high, and concise.
+    urgency = "URGENT — HIGH RISK" if triage['risk_level'] == 'high' else triage['risk_level'].upper()
+    memo_prompt = f"""Write a 4-line internal coordinator memo for an NHS patient flagged by WaitWise.
+Use EXACTLY this format — no extra text, no preamble:
 
-Patient: {patient['name']}, age {patient['age']}, {patient['condition']}, {patient['wait_weeks']} weeks wait.
-Risk: {triage['risk_level'].upper()} (score {triage['risk_score']}).
+[{urgency}]
+Patient: {patient['name']} ({patient['patient_id']}) | Age {patient['age']} | {patient['condition']} | {patient['wait_weeks']} wks waiting
+Action:  <one-line action — what the coordinator must do>
+Reason:  <one-line clinical reason — keep under 20 words>
+
+Data:
+Risk score: {triage['risk_score']}
 Reason: {triage['reason']}
-Recommended action: {triage['recommended_action']}
-
-Write the memo only."""
+Recommended action: {triage['recommended_action']}"""
 
     letter_prompt = f"""Write a compassionate, plain-English letter to an NHS patient who has been waiting for treatment.
 Do not alarm them. Explain that a coordinator will be in touch.
