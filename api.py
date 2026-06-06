@@ -18,9 +18,10 @@ from datetime import datetime, timezone
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+import httpx
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 import graph as pipeline
@@ -365,6 +366,50 @@ def voice_session_log():
     """Voice-agent session log (for the ElevenLabs bounty submission)."""
     voice = [e for e in _AUDIT if e.get("actor") == "voice-agent"]
     return {"count": len(voice), "events": voice}
+
+
+# ---------- OpenAI passthrough (so ElevenLabs' custom LLM = this backend) ----------
+# ElevenLabs cloud only needs ONE public URL (this backend); we forward LLM calls
+# to Nemotron over the LAN, so the DGX never has to be exposed publicly.
+
+@app.get("/v1/models")
+async def proxy_models():
+    base = llm_config.BASE_URL
+    if not base:
+        return {"object": "list", "data": [{"id": llm_config.MODEL, "object": "model"}]}
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{base}/models")
+            return JSONResponse(status_code=r.status_code, content=r.json())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"LLM backend unreachable: {e}")
+
+
+@app.post("/v1/chat/completions")
+async def proxy_chat(request: Request):
+    """Forward an OpenAI chat-completions call to Nemotron (vLLM), streaming or not."""
+    base = llm_config.BASE_URL
+    if not base:
+        raise HTTPException(status_code=503, detail="No LLM backend (set MOCK_LLM=false + VLLM_BASE_URL)")
+    body = await request.body()
+    url = f"{base}/chat/completions"
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer EMPTY"}
+    try:
+        stream = bool(json.loads(body or b"{}").get("stream"))
+    except Exception:
+        stream = False
+
+    if stream:
+        async def gen():
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("POST", url, content=body, headers=headers) as r:
+                    async for chunk in r.aiter_bytes():
+                        yield chunk
+        return StreamingResponse(gen(), media_type="text/event-stream")
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        r = await client.post(url, content=body, headers=headers)
+        return JSONResponse(status_code=r.status_code, content=r.json())
 
 
 @app.get("/insights")
