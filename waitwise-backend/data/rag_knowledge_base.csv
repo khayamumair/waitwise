@@ -1,0 +1,13 @@
+doc_id,title,category,source,content_summary,chunk_count
+KB01,NHS RTT 18-week standard,pathway_standard,NHS England RTT rules,Patients should start consultant-led treatment within 18 weeks of referral.,3
+KB02,Long-waiter definition (52 weeks),pathway_standard,NHS Elective Recovery,Patients waiting 52+ weeks are reportable long waiters requiring active management.,2
+KB03,Contact-failure threshold (90 days),coordination_rule,WaitWise team rule,No patient should go 90+ days without contact while on an active pathway.,2
+KB04,High-risk composite criteria,risk_model,WaitWise team rule,"Risk rises with wait length, deprivation, referral severity, contact gap and pathway change.",4
+KB05,Pathway-change reassessment rule,coordination_rule,WaitWise team rule,A pathway change requires clinical reassessment; unactioned changes are a safety risk.,2
+KB06,Referral severity stratification,risk_model,Elective Recovery Programme,Two-week-wait and urgent referrals warrant lower breach thresholds than routine.,3
+KB07,ONS patient-experience evidence,evidence,ONS Hospital Waiting Experience 2025,54% of waiting patients were never contacted; 45% rated experience poor or very poor.,3
+KB08,Youth disengagement evidence,evidence,ONS Hospital Waiting Experience 2025,"68% of 16-29s were never contacted, the worst-affected age band.",2
+KB09,London borough deprivation context,evidence,English IMD 2019 + ONS,Inner-London boroughs concentrate IMD Q1 populations with higher anxiety scores.,3
+KB10,Coordinator action menu,coordination_rule,WaitWise team rule,"Available actions: outreach call, letter, clinical escalation, booking review, no action.",2
+KB11,Multilingual communication guidance,coordination_rule,NHS Accessible Information Standard,Patients with a non-English primary language should receive translated communications.,2
+KB12,Voice check-in suitability,coordination_rule,WaitWise team rule,"Voice outreach suits older, digitally-excluded or language-barrier patients.",2

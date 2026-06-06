@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* NHS-inspired modern clinical theme.
+     Palette anchored to the NHS identity: NHS Blue #005EB6, NHS Black #212b32,
+     pale grey surface #f4f7f9, NHS Red/Green/Warm-Yellow for clinical status. */
+  --background: 204 33% 96%;        /* #f4f7f9 pale clinical grey */
+  --foreground: 202 30% 16%;        /* #212b32 NHS black */
+
+  --card: 0 0% 100%;
+  --card-foreground: 202 30% 16%;
+
+  --muted: 204 27% 93%;             /* light grey fill */
+  --muted-foreground: 202 21% 37%;  /* #4c6272 NHS secondary text */
+
+  --border: 204 13% 84%;            /* #d8dde0 NHS grey */
+
+  --primary: 207 100% 36%;          /* #005EB6 NHS Blue */
+  --primary-foreground: 0 0% 100%;
+
+  --accent: 210 56% 94%;            /* #e8f0f9 pale blue tint */
+  --accent-foreground: 220 100% 27%;/* #003087 NHS Dark Blue */
+
+  --success: 146 100% 25%;          /* #007f3b NHS Green */
+  --warning: 30 96% 38%;            /* readable amber for MEDIUM */
+  --danger: 5 78% 47%;              /* #d5281b NHS Red */
+
+  --radius: 0.5rem;                 /* squarer, clinical */
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Frutiger W01", "Mulish", Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Faint clinical grid wash behind the page header. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--primary) / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--primary) / 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-position: center;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
+}
+
+/* Card elevation - subtle, clinical, not glassy. */
+.card-elevated {
+  box-shadow: 0 1px 2px hsl(202 30% 16% / 0.04), 0 1px 3px hsl(202 30% 16% / 0.06);
+}
+
+/* NHS focus ring - yellow, per the NHS Design System focus state. */
+.nhs-focus:focus-visible {
+  outline: 3px solid #ffeb3b;
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px hsl(202 30% 16%);
+}
+
+/* Custom scrollbar for trace panels */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -1,0 +1,11 @@
+borough,imd_quintile,life_satisfaction_mean,anxiety_mean,happiness_mean,worthwhile_mean,economic_inactivity_pct,population_estimate,waiting_list_patients_est,source
+Hackney,1,7.0,3.88,7.2,7.5,14.2,281000,8400,ONS Personal Wellbeing Borough 2023/24
+Tower Hamlets,1,6.8,4.1,7.0,7.3,16.8,318000,9540,ONS Personal Wellbeing Borough 2023/24
+Southwark,2,7.1,3.95,7.1,7.4,13.5,308000,9240,ONS Personal Wellbeing Borough 2023/24
+Islington,1,7.2,3.72,7.3,7.6,12.9,245000,7350,ONS Personal Wellbeing Borough 2023/24
+Lambeth,2,7.0,3.8,7.1,7.4,14.8,332000,9960,ONS Personal Wellbeing Borough 2023/24
+Newham,1,6.9,4.05,6.9,7.2,18.1,352000,10560,ONS Personal Wellbeing Borough 2023/24
+Waltham Forest,2,7.1,3.65,7.2,7.5,13.2,277000,8310,ONS Personal Wellbeing Borough 2023/24
+Lewisham,2,7.0,3.7,7.1,7.4,15.0,298000,8940,ONS Personal Wellbeing Borough 2023/24
+Haringey,3,7.2,3.6,7.3,7.6,13.8,267000,8010,ONS Personal Wellbeing Borough 2023/24
+Greenwich,3,7.3,3.45,7.4,7.7,12.4,285000,8550,ONS Personal Wellbeing Borough 2023/24
