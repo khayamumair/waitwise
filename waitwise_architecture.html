@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body { background: transparent; color: var(--text-primary, #1a1a1a); padding: 16px; }
+  h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: var(--text-primary, #111); }
+  .subtitle { font-size: 11px; color: var(--text-secondary, #666); margin-bottom: 20px; }
+
+  .diagram { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ROW LABELS */
+  .layer-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary, #888); margin-bottom: 4px; }
+
+  /* ROWS */
+  .row { display: flex; align-items: stretch; gap: 10px; }
+
+  /* BLOCKS */
+  .block {
+    border-radius: 8px;
+    padding: 12px 14px;
+    flex: 1;
+    min-width: 0;
+    border: 1.5px solid transparent;
+  }
+  .block-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .block-sub { font-size: 11px; color: var(--text-secondary, #555); line-height: 1.5; }
+  .block-file { font-size: 10px; font-weight: 600; margin-top: 6px; font-family: monospace; opacity: 0.75; }
+
+  /* COLOUR THEMES */
+  .blue   { background: #EBF3FF; border-color: #93C5FD; }
+  .blue .block-title   { color: #1D4ED8; }
+  .green  { background: #ECFDF5; border-color: #6EE7B7; }
+  .green .block-title  { color: #065F46; }
+  .purple { background: #F5F3FF; border-color: #C4B5FD; }
+  .purple .block-title { color: #5B21B6; }
+  .orange { background: #FFF7ED; border-color: #FCD34D; }
+  .orange .block-title { color: #92400E; }
+  .grey   { background: #F4F4F5; border-color: #D4D4D8; }
+  .grey .block-title   { color: #3F3F46; }
+  .red    { background: #FEF2F2; border-color: #FCA5A5; }
+  .red .block-title    { color: #991B1B; }
+
+  /* ARROWS */
+  .arrow-row { display: flex; justify-content: center; align-items: center; gap: 10px; height: 18px; }
+  .arrow { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .arrow-line { width: 100%; height: 2px; background: var(--text-secondary, #ccc); position: relative; }
+  .arrow-line::after { content: '▼'; position: absolute; right: -1px; top: -9px; font-size: 12px; color: var(--text-secondary, #aaa); }
+  .arrow-label { font-size: 10px; color: var(--text-secondary, #888); white-space: nowrap; }
+
+  /* ENDPOINT TABLE */
+  .endpoint-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 11px; }
+  .endpoint-table th { text-align: left; font-weight: 700; padding: 4px 6px; border-bottom: 1.5px solid #D4D4D8; color: var(--text-secondary, #555); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .endpoint-table td { padding: 4px 6px; border-bottom: 1px solid #E5E5E5; vertical-align: top; line-height: 1.4; }
+  .method { font-family: monospace; font-weight: 700; font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+  .get { background: #ECFDF5; color: #065F46; }
+  .post { background: #EBF3FF; color: #1D4ED8; }
+  .path { font-family: monospace; font-size: 11px; }
+  .badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; margin-left: 4px; }
+  .badge-scan { background: #FFF7ED; color: #92400E; }
+  .badge-stream { background: #F5F3FF; color: #5B21B6; }
+  .badge-result { background: #ECFDF5; color: #065F46; }
+  .badge-approve { background: #FEF2F2; color: #991B1B; }
+  .badge-gpu { background: #F4F4F5; color: #3F3F46; }
+
+  .divider { border: none; border-top: 1.5px dashed #E5E5E5; margin: 4px 0; }
+  .tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-right: 3px; }
+  .tag-sql { background: #FFF7ED; color: #92400E; }
+  .tag-llm { background: #F5F3FF; color: #5B21B6; }
+  .tag-rag { background: #ECFDF5; color: #065F46; }
+</style>
+</head>
+<body>
+<h2>WaitWise — Backend Architecture</h2>
+<p class="subtitle">How each file connects · What the frontend can call</p>
+
+<div class="diagram">
+
+  <!-- FRONTEND -->
+  <div class="layer-label">Frontend (your colleague's React app)</div>
+  <div class="row">
+    <div class="block grey">
+      <div class="block-title">React Dashboard</div>
+      <div class="block-sub">Button press → calls /scan · Listens on /stream · Renders patient cards from /results · Approve button calls /approve · Polls /gpu every 2s</div>
+      <div class="block-file">→ talks to api.py only</div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><div class="arrow"><div class="arrow-line"></div></div><div class="arrow-label">HTTP / SSE</div><div class="arrow"><div class="arrow-line"></div></div></div>
+
+  <!-- API -->
+  <div class="layer-label">API Layer</div>
+  <div class="row">
+    <div class="block blue">
+      <div class="block-title">api.py — FastAPI server</div>
+      <table class="endpoint-table">
+        <tr><th>Method</th><th>Path</th><th>Used for</th></tr>
+        <tr><td><span class="method post">POST</span></td><td class="path">/scan</td><td>Trigger pipeline<span class="badge badge-scan">► button</span></td></tr>
+        <tr><td><span class="method get">GET</span></td><td class="path">/stream/{id}</td><td>Live reasoning trace<span class="badge badge-stream">SSE</span></td></tr>
+        <tr><td><span class="method get">GET</span></td><td class="path">/results/{id}</td><td>Patient cards + comms<span class="badge badge-result">JSON</span></td></tr>
+        <tr><td><span class="method post">POST</span></td><td class="path">/approve/{id}</td><td>Coordinator approval<span class="badge badge-approve">1-click</span></td></tr>
+        <tr><td><span class="method get">GET</span></td><td class="path">/gpu</td><td>GPU stats<span class="badge badge-gpu">poll</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="arrow-row"><div class="arrow"><div class="arrow-line"></div></div><div class="arrow-label">calls run_pipeline()</div><div class="arrow"><div class="arrow-line"></div></div></div>
+
+  <!-- ORCHESTRATION -->
+  <div class="layer-label">Orchestration Layer</div>
+  <div class="row">
+    <div class="block purple">
+      <div class="block-title">graph.py — LangGraph pipeline</div>
+      <div class="block-sub">Wires Monitor → Triage → Communication in order. Passes state (flagged patients, triage results) between agents. Holds EVENT_QUEUES so streaming works. Writes scan start/end to DuckDB.</div>
+      <div class="block-file">agents/monitor.py → agents/triage.py → agents/communication.py</div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><div class="arrow"><div class="arrow-line"></div></div><div class="arrow-label">state flows through agents</div><div class="arrow"><div class="arrow-line"></div></div></div>
+
+  <!-- AGENTS -->
+  <div class="layer-label">Agent Layer</div>
+  <div class="row">
+    <div class="block green">
+      <div class="block-title">monitor.py</div>
+      <div class="block-sub">Scores all 503 patients by how many risk rules they hit. Returns top 3.</div>
+      <div class="block-sub" style="margin-top:6px"><span class="tag tag-sql">SQL</span> No LLM. Pure DuckDB queries.</div>
+      <div class="block-file">reads: patients, contact_log</div>
+    </div>
+    <div class="block purple">
+      <div class="block-title">triage.py</div>
+      <div class="block-sub">Retrieves NHS rules from ChromaDB. Sends patient + rules to Nemotron. Gets back risk level, score, reason.</div>
+      <div class="block-sub" style="margin-top:6px"><span class="tag tag-rag">RAG</span><span class="tag tag-llm">LLM</span> Nemotron via vLLM.</div>
+      <div class="block-file">reads: vector_store/ · writes: triage_results</div>
+    </div>
+    <div class="block orange">
+      <div class="block-title">communication.py</div>
+      <div class="block-sub">Generates coordinator memo + patient letter per flagged case.</div>
+      <div class="block-sub" style="margin-top:6px"><span class="tag tag-llm">LLM</span> Nemotron via vLLM.</div>
+      <div class="block-file">writes: communications</div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><div class="arrow"><div class="arrow-line"></div></div><div class="arrow-label">reads / writes</div><div class="arrow"><div class="arrow-line"></div></div></div>
+
+  <!-- DATA -->
+  <div class="layer-label">Data Layer</div>
+  <div class="row">
+    <div class="block grey">
+      <div class="block-title">DuckDB · db/waitwise.db</div>
+      <div class="block-sub">patients · contact_log · triage_results · communications · scan_runs · coordinators</div>
+      <div class="block-file">ingest.py loads all CSVs here on first run</div>
+    </div>
+    <div class="block grey">
+      <div class="block-title">ChromaDB · vector_store/</div>
+      <div class="block-sub">rag_knowledge_base (9 NHS rules) · borough_wellbeing (10 boroughs) — embedded as vectors for semantic search</div>
+      <div class="block-file">ingest.py embeds these on first run</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+duckdb
+chromadb
+sentence-transformers
+langgraph
+openai
+pandas
+pydantic

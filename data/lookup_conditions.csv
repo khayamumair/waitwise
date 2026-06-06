@@ -1,0 +1,6 @@
+condition,specialty,default_target_weeks,clinical_priority_weight
+Orthopaedic,Trauma & Orthopaedics,18,0.6
+Cardiology,Cardiology,18,0.9
+Neurology,Neurology,18,0.85
+Gastroenterology,Gastroenterology,18,0.7
+Ophthalmology,Ophthalmology,18,0.5
