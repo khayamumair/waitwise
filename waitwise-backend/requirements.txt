@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+duckdb
+chromadb
+sentence-transformers
+langgraph
+openai
+pandas
+pydantic
+pynvml  # real GPU telemetry on the DGX Spark (gpu_monitor falls back gracefully if absent)
+pytest
+pytest-asyncio
+httpx

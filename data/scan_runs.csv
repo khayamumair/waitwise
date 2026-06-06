@@ -1,7 +1,0 @@
-scan_run_id,started_at,finished_at,patients_scanned,patients_flagged,patients_triaged,inference_backend,status,duration_seconds
-SR001,2026-05-21T09:00:00,2026-05-21T09:00:00,503,3,3,local_vllm,complete,5.9
-SR002,2026-05-25T11:30:00,2026-05-25T11:31:00,503,3,3,nebius,complete,12.8
-SR003,2026-05-28T08:15:00,2026-05-28T08:15:00,503,0,0,local_vllm,failed,1.2
-SR004,2026-06-01T07:45:00,2026-06-01T07:48:00,10003,1244,25,local_vllm,complete,2.8
-SR005,2026-06-03T06:30:00,2026-06-03T06:33:00,10003,1237,25,local_vllm,complete,2.6
-SR006,2026-06-04T08:00:00,2026-06-04T08:00:00,10003,1240,25,local_vllm,complete,2.7

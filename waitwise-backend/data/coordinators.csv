@@ -1,0 +1,6 @@
+coordinator_id,name,role,borough_responsibility,access_level
+CO001,Sarah Mensah,Senior Waiting List Coordinator,All,approver
+CO002,Tom Bradley,Waiting List Coordinator,"Hackney, Islington",approver
+CO003,Priya Raman,Waiting List Coordinator,Tower Hamlets,approver
+CO004,James Okoro,Pathway Navigator,"Southwark, Lambeth",reviewer
+CO005,Elena Costa,Service Manager,All,admin

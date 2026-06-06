@@ -1,0 +1,5 @@
+referral_type,description,target_weeks,severity_weight
+routine,Standard GP referral,18,0.2
+urgent,Urgent clinical referral,6,0.7
+two_week_wait,Suspected cancer / 2WW pathway,2,1
+post_ae,Referral following A&E attendance,4,0.6
