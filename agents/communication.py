@@ -1,23 +1,25 @@
 """
 communication.py — Communication Agent
-Generates a coordinator memo and patient letter for each flagged patient.
-Uses the same MOCK_LLM toggle as triage.py.
+Generates a coordinator memo and patient letter for each HIGH-risk patient.
+
+v2: drafting runs as a concurrent batch (same ThreadPoolExecutor pattern as
+triage), and only the high-risk cohort gets letters — that is where a coordinator
+actually acts, and it keeps the GPU budget focused. Backend chosen by llm_config.
 """
 
 import duckdb
-import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
-from openai import OpenAI
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import graph as g
+import llm_config
 
 DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
-MOCK_LLM = os.getenv("MOCK_LLM", "false").lower() == "true"
-VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:11434/v1")
-VLLM_MODEL    = os.getenv("VLLM_MODEL",    "llama3.2:3b")
+
+DRAFTED_EVENT_SAMPLE = 8
 
 
 def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
@@ -43,7 +45,7 @@ def _mock_comms(patient: dict, triage: dict) -> tuple[str, str]:
 
 
 def _llm_comms(patient: dict, triage: dict) -> tuple[str, str]:
-    client = OpenAI(base_url=VLLM_BASE_URL, api_key="EMPTY")
+    client = llm_config.get_client()
 
     memo_prompt = f"""Write an internal coordinator memo for the following NHS patient flagged by the WaitWise system.
 Be clinical, urgent if risk is high, and concise.
@@ -67,7 +69,7 @@ Write the letter only."""
 
     def call(prompt):
         r = client.chat.completions.create(
-            model=VLLM_MODEL,
+            model=llm_config.MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
             max_tokens=300,
@@ -77,9 +79,17 @@ Write the letter only."""
     return call(memo_prompt), call(letter_prompt)
 
 
+def _draft_one(patient: dict, triage: dict) -> tuple[str, str]:
+    llm_config.mock_pace()  # watchable demo pacing (no-op for real backends)
+    try:
+        return _mock_comms(patient, triage) if llm_config.is_mock() else _llm_comms(patient, triage)
+    except Exception:
+        return _mock_comms(patient, triage)
+
+
 def run(state: dict) -> dict:
     """
-    state keys consumed: flagged_patients, triage_results, scan_run_id, event_queue
+    state keys consumed: flagged_patients, triage_results, scan_run_id
     state keys produced: communications (list of dicts)
     """
     con = duckdb.connect(DB_PATH)
@@ -87,12 +97,14 @@ def run(state: dict) -> dict:
     emit = g.EVENT_QUEUES.get(scan_id, []).append
     comms = []
 
-    # Build a lookup so we can match patient data to triage results
-    triage_by_pid = {t["patient_id"]: t for t in state["triage_results"]}
     patient_by_pid = {p["patient_id"]: p for p in state["flagged_patients"]}
 
-    def event(agent, event_type, message, patient_id=""):
-        emit({
+    # Only draft for HIGH-risk patients — that is where coordinators act.
+    targets = [t for t in state["triage_results"] if t["risk_level"] == "high"]
+    targets.sort(key=lambda t: t["risk_score"], reverse=True)
+
+    def event(agent, event_type, message, patient_id="", **extra):
+        evt = {
             "event_id": f"EVT{uuid.uuid4().hex[:6].upper()}",
             "scan_run_id": scan_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -100,20 +112,37 @@ def run(state: dict) -> dict:
             "event_type": event_type,
             "patient_id": patient_id,
             "message": message,
-        })
+        }
+        evt.update(extra)
+        emit(evt)
 
-    for triage in state["triage_results"]:
-        pid = triage["patient_id"]
-        patient = patient_by_pid[pid]
+    if not targets:
+        con.close()
+        state["communications"] = []
+        return state
 
-        event("communication", "drafting",
-              f"Generating coordinator memo and patient letter for {pid}...",
-              patient_id=pid)
+    event("communication", "drafting",
+          f"Drafting coordinator memos + patient letters for {len(targets)} high-risk patients "
+          f"via {llm_config.LABEL}...")
 
-        memo, letter = _mock_comms(patient, triage) if MOCK_LLM else _llm_comms(patient, triage)
+    start = datetime.now(timezone.utc)
+    workers = 1 if llm_config.is_mock() else llm_config.MAX_CONCURRENCY
+    drafted: list[tuple[dict, tuple[str, str]]] = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {}
+        for triage in targets:
+            patient = patient_by_pid.get(triage["patient_id"])
+            if patient is None:
+                continue
+            futures[pool.submit(_draft_one, patient, triage)] = (patient, triage)
+        for fut in futures:
+            drafted.append((futures[fut], fut.result()))
+
+    elapsed_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
+
+    for (patient, triage), (memo, letter) in drafted:
+        pid = patient["patient_id"]
         now = datetime.now(timezone.utc).isoformat()
-
-        # New schema stores memo and letter as two separate rows with a 'type' field
         for comm_type, content in [("coordinator_memo", memo), ("patient_letter", letter)]:
             comm_row = {
                 "communication_id": f"COMM{uuid.uuid4().hex[:6].upper()}",
@@ -132,12 +161,17 @@ def run(state: dict) -> dict:
             placeholders = ", ".join(["?" for _ in comm_row])
             con.execute(
                 f"INSERT INTO communications ({cols}) VALUES ({placeholders})",
-                list(comm_row.values())
+                list(comm_row.values()),
             )
 
+    for (patient, _t), _ in drafted[:DRAFTED_EVENT_SAMPLE]:
         event("communication", "drafted",
-              f"Communications ready for {pid}.",
-              patient_id=pid)
+              f"Communications ready for {patient['patient_id']}.",
+              patient_id=patient["patient_id"])
+
+    event("communication", "drafted",
+          f"Drafting complete: {len(drafted)} memo+letter pairs in {elapsed_ms} ms.",
+          n_drafted=len(drafted), elapsed_ms=elapsed_ms)
 
     con.close()
     state["communications"] = comms
