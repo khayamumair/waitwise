@@ -18,13 +18,14 @@ import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 import graph as g
 import llm_config
 
-DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
+DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent.parent / "db" / "waitwise.db"))
 VECTOR_PATH = str(Path(__file__).parent.parent / "vector_store")
 
 # Stream at most this many individual `result` lines to the live trace.

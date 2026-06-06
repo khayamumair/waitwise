@@ -14,6 +14,7 @@ import duckdb
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -26,7 +27,7 @@ import insights as cohort_insights
 import llm_config
 from gpu_monitor import MONITOR as gpu
 
-DB_PATH = str(Path(__file__).parent / "db" / "waitwise.db")
+DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent / "db" / "waitwise.db"))
 
 app = FastAPI(title="WaitWise API")
 
@@ -162,7 +163,15 @@ def get_results(scan_id: str):
     patient_ids = [t["patient_id"] for t in triage_rows]
     placeholders = ",".join(f"'{p}'" for p in patient_ids)
     patients = con.execute(
-        f"SELECT * FROM patients WHERE patient_id IN ({placeholders})"
+        f"""
+        SELECT p.*,
+               MAX(CASE WHEN w.breach_52wk THEN true ELSE false END) AS breach_52,
+               MAX(CASE WHEN w.breach_18wk THEN true ELSE false END) AS breach_18
+        FROM patients p
+        LEFT JOIN waiting_list_status w USING (patient_id)
+        WHERE p.patient_id IN ({placeholders})
+        GROUP BY ALL
+        """
     ).df().to_dict("records")
     patient_map = {p["patient_id"]: p for p in patients}
 

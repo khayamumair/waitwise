@@ -9,13 +9,14 @@ This avoids LangGraph's state deep-copy breaking the shared list reference.
 
 import duckdb
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
 
 from agents import monitor, triage, communication
 
-DB_PATH = str(Path(__file__).parent / "db" / "waitwise.db")
+DB_PATH = os.getenv("WAITWISE_DB_PATH", str(Path(__file__).parent / "db" / "waitwise.db"))
 
 # Module-level store — agents import and write to this directly
 EVENT_QUEUES: dict[str, list] = {}
