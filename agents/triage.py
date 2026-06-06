@@ -19,19 +19,11 @@ import graph as g
 DB_PATH = str(Path(__file__).parent.parent / "db" / "waitwise.db")
 VECTOR_PATH = str(Path(__file__).parent.parent / "vector_store")
 
-##################################################################
-# --- Set to False when running on the DGX Spark with vLLM ---
-MOCK_LLM = False # True
-
-# vLLM on DGX Spark exposes an OpenAI-compatible endpoint at localhost:8000
-# VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
-# VLLM_MODEL = os.getenv("VLLM_MODEL", "nvidia/Nemotron-Mini-4B-Instruct")
-
-#Local LLM
-VLLM_BASE_URL = "http://localhost:11434/v1"
-VLLM_MODEL = "llama3.2:3b"
-
-#################################
+MOCK_LLM = os.getenv("MOCK_LLM", "false").lower() == "true"
+# On DGX Spark: export VLLM_BASE_URL=http://localhost:8000/v1
+#               export VLLM_MODEL=nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:11434/v1")
+VLLM_MODEL    = os.getenv("VLLM_MODEL",    "llama3.2:3b")
 
 def _get_llm_client():
     # api_key="EMPTY" is required by vLLM even though it doesn't check it
