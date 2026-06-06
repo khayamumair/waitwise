@@ -12,6 +12,7 @@ Three endpoints Khayam needs:
 import asyncio
 import duckdb
 import json
+import re
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -368,6 +369,50 @@ def voice_session_log():
     return {"count": len(voice), "events": voice}
 
 
+@app.post("/voice/postcall")
+async def voice_postcall(request: Request):
+    """
+    ElevenLabs post-call webhook. After each voice check-in, ElevenLabs POSTs the
+    transcript + its extracted data-collection fields here; we log the outcome to
+    the audit trail. Robust path that needs no in-call tool calling.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    data = body.get("data", body) or {}
+    analysis = data.get("analysis", {}) or {}
+    summary = analysis.get("transcript_summary") or analysis.get("summary") or ""
+    dcr = analysis.get("data_collection_results", {}) or {}
+
+    def field(key):
+        v = dcr.get(key)
+        return v.get("value") if isinstance(v, dict) else v
+
+    name = field("patient_first_name")
+    still = field("still_waiting_for_appointment")
+    worse = field("condition_worsened")
+
+    bits = []
+    if name:
+        bits.append(f"Patient {name}")
+    if still is not None:
+        bits.append("still waiting" if still else "no longer needs appointment")
+    if worse:
+        bits.append("CONDITION WORSENED - flag for urgent follow-up")
+    if summary:
+        bits.append(str(summary))
+    detail = "; ".join(bits) or "Voice check-in completed."
+
+    _record_audit({
+        "actor": "voice-agent",
+        "action": "voice_checkin",
+        "patient_id": str(name) if name else None,
+        "detail": detail[:600],
+    })
+    return {"ok": True}
+
+
 # ---------- OpenAI passthrough (so ElevenLabs' custom LLM = this backend) ----------
 # ElevenLabs cloud only needs ONE public URL (this backend); we forward LLM calls
 # to Nemotron over the LAN, so the DGX never has to be exposed publicly.
@@ -385,31 +430,107 @@ async def proxy_models():
         raise HTTPException(status_code=502, detail=f"LLM backend unreachable: {e}")
 
 
+# Nemotron emits tool calls as: <toolcall> {"function": "name", "arguments": {...}} </toolcall>
+# (sometimes <tool_call>, "name" instead of "function", "parameters" instead of "arguments").
+_TOOLCALL_RE = re.compile(r"<tool_?call>\s*(\{.*?\})\s*</tool_?call>", re.DOTALL)
+
+
+def _extract_tool_calls(content: str) -> list[dict]:
+    calls = []
+    for m in _TOOLCALL_RE.finditer(content or ""):
+        try:
+            obj = json.loads(m.group(1))
+        except Exception:
+            continue
+        name = obj.get("name") or obj.get("function")
+        args = obj.get("arguments", obj.get("parameters", {}))
+        if not name:
+            continue
+        if not isinstance(args, str):
+            args = json.dumps(args)
+        calls.append({
+            "id": f"call_{uuid.uuid4().hex[:8]}",
+            "type": "function",
+            "function": {"name": name, "arguments": args},
+        })
+    return calls
+
+
 @app.post("/v1/chat/completions")
 async def proxy_chat(request: Request):
-    """Forward an OpenAI chat-completions call to Nemotron (vLLM), streaming or not."""
+    """
+    Forward an OpenAI chat-completions call to Nemotron (vLLM). When the request
+    carries tools, normalise Nemotron's <toolcall> text into proper OpenAI
+    tool_calls so ElevenLabs (and any OpenAI client) can use them.
+    """
     base = llm_config.BASE_URL
     if not base:
         raise HTTPException(status_code=503, detail="No LLM backend (set MOCK_LLM=false + VLLM_BASE_URL)")
-    body = await request.body()
+    raw = await request.body()
+    try:
+        payload = json.loads(raw or b"{}")
+    except Exception:
+        payload = {}
+    wants_stream = bool(payload.get("stream"))
+    has_tools = bool(payload.get("tools"))
     url = f"{base}/chat/completions"
     headers = {"Content-Type": "application/json", "Authorization": "Bearer EMPTY"}
-    try:
-        stream = bool(json.loads(body or b"{}").get("stream"))
-    except Exception:
-        stream = False
 
-    if stream:
-        async def gen():
-            async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream("POST", url, content=body, headers=headers) as r:
-                    async for chunk in r.aiter_bytes():
-                        yield chunk
-        return StreamingResponse(gen(), media_type="text/event-stream")
+    # No tools -> cheap passthrough, preserve real token streaming for low latency.
+    if not has_tools:
+        if wants_stream:
+            async def gen():
+                async with httpx.AsyncClient(timeout=None) as client:
+                    async with client.stream("POST", url, content=raw, headers=headers) as r:
+                        async for chunk in r.aiter_bytes():
+                            yield chunk
+            return StreamingResponse(gen(), media_type="text/event-stream")
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(url, content=raw, headers=headers)
+            return JSONResponse(status_code=r.status_code, content=r.json())
 
+    # Tools present -> get the full completion, then normalise tool calls.
+    upstream = {**payload, "stream": False}
     async with httpx.AsyncClient(timeout=120) as client:
-        r = await client.post(url, content=body, headers=headers)
-        return JSONResponse(status_code=r.status_code, content=r.json())
+        r = await client.post(url, json=upstream, headers=headers)
+        data = r.json()
+    if "choices" not in data:
+        return JSONResponse(status_code=r.status_code, content=data)  # forward errors
+
+    choice = data["choices"][0]
+    msg = choice.get("message", {})
+    content = msg.get("content") or ""
+    if not msg.get("tool_calls"):
+        tcs = _extract_tool_calls(content)
+        if tcs:
+            msg["tool_calls"] = tcs
+            msg["content"] = None
+            choice["finish_reason"] = "tool_calls"
+
+    if not wants_stream:
+        return JSONResponse(status_code=200, content=data)
+
+    # Wrap the (normalised) result as an OpenAI streaming response.
+    def _chunk(delta: dict, finish):
+        return "data: " + json.dumps({
+            "id": data.get("id", "chatcmpl-proxy"),
+            "object": "chat.completion.chunk",
+            "created": data.get("created", 0),
+            "model": data.get("model", payload.get("model", "")),
+            "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+        }) + "\n\n"
+
+    async def gen():
+        if msg.get("tool_calls"):
+            delta_tcs = [{"index": i, **tc} for i, tc in enumerate(msg["tool_calls"])]
+            yield _chunk({"role": "assistant", "tool_calls": delta_tcs}, None)
+            yield _chunk({}, "tool_calls")
+        else:
+            yield _chunk({"role": "assistant", "content": content}, None)
+            yield _chunk({}, choice.get("finish_reason", "stop"))
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
 
 
 @app.get("/insights")
