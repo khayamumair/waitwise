@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import graph as pipeline
+import insights as cohort_insights
 import llm_config
 from gpu_monitor import MONITOR as gpu
 
@@ -240,6 +241,19 @@ def approve(triage_id: str, req: ApproveRequest):
     )
     con.close()
     return {"approved": True, "triage_id": triage_id, "timestamp": now}
+
+
+@app.get("/insights")
+def get_insights():
+    """
+    Cohort-level, non-obvious findings over the whole waiting list (RTT breaches,
+    pathway-event blind spots, the deprivation/DNA gradient, borough hotspots).
+    Independent of any scan — loads immediately for the dashboard insight panel.
+    """
+    try:
+        return cohort_insights.compute_insights()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Insight computation failed: {e}")
 
 
 @app.get("/gpu")
