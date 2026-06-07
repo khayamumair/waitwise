@@ -128,12 +128,12 @@ All data is **synthetic** — no real patient information. The `waitwise-backend
 
 ## Data grounding uses six open datasets:
 From the City of London: 
-- **Patients Registered at a GP Practice (population denominators and GP access baseline by borough)
-- **the London Health Inequalities Strategic Indicators (deprivation, health outcome, and inequality metrics for borough-level risk stratification). 
+- Patients Registered at a GP Practice (population denominators and GP access baseline by borough)
+- the London Health Inequalities Strategic Indicators (deprivation, health outcome, and inequality metrics for borough-level risk stratification). 
 From Office of National Statistics (ONS): 
-- **The NHS Community Health Survey Experiences Thematic Analysis, 
-- **NHS Hospital Waiting Experience Survey (Jan–Mar 2025, n=11,890), 
-- **Personal Wellbeing by Borough, and Non-Seasonally Adjusted Quarterly Estimates of Personal Wellbeing
+- The NHS Community Health Survey Experiences Thematic Analysis, 
+- NHS Hospital Waiting Experience Survey (Jan–Mar 2025, n=11,890), 
+- Personal Wellbeing by Borough, and Non-Seasonally Adjusted Quarterly Estimates of Personal Wellbeing
 
 Supporting datasets used to calibrate coordination failure thresholds, set patient experience distributions, and quantify the wellbeing-to-workforce-inactivity economic chain that connects this project to the Economic Systems track alongside Public Services.
 
