@@ -94,6 +94,8 @@ vllm serve nvidia/Nemotron-Mini-4B-Instruct --port 8000 --host 0.0.0.0
 
 # Backend on your machine:
 cd waitwise-backend
+python ingest.py
+
 export MOCK_LLM=false
 export VLLM_BASE_URL=http://<DGX-IP>:8000/v1
 export VLLM_MODEL=nvidia/Nemotron-Mini-4B-Instruct
