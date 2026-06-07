@@ -161,7 +161,12 @@ def get_results(scan_id: str):
 
     if not triage_rows:
         con.close()
-        raise HTTPException(status_code=404, detail="No results for this scan")
+        run = _active_runs.get(scan_id, {})
+        if run.get("error"):
+            raise HTTPException(status_code=500, detail=f"Pipeline failed:\n{run['error']}")
+        if not run.get("done"):
+            raise HTTPException(status_code=202, detail="Scan still in progress")
+        raise HTTPException(status_code=404, detail="No results for this scan — pipeline may have written 0 triage rows")
 
     patient_ids = [t["patient_id"] for t in triage_rows]
     placeholders = ",".join(f"'{p}'" for p in patient_ids)
