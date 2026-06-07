@@ -126,6 +126,17 @@ See [`waitwise-backend`](waitwise-backend/) endpoints `/voice/next-patient`, `/v
 
 All data is **synthetic** — no real patient information. The `waitwise-backend/data/` directory holds **17 CSV tables / ~10,003 patients** modelling the real NHS structure: the two‑queue e‑RS → PTL pathway, RTT 18/52‑week clocks, IMD deprivation quintiles, London borough deprivation/wellbeing, pathway events (referrals, pathway changes, DNAs), contact history, and a 12‑doc NHS guidance corpus for RAG. It was engineered to reproduce realistic distributions (1,240 flagged, 302 high‑risk band, 5,482 never contacted, 5,344 voice‑suitable) plus planted edge cases and three "hero" patients for the demo. Statistics quoted in the UI (7.11M waiting, 65.3% within 18 weeks, 2× deprivation gap) are from NHS England / ONS / King's Fund and cited in‑app.
 
+## Data grounding uses six open datasets:
+From the City of London: 
+- **Patients Registered at a GP Practice (population denominators and GP access baseline by borough)
+- **the London Health Inequalities Strategic Indicators (deprivation, health outcome, and inequality metrics for borough-level risk stratification). 
+From Office of National Statistics (ONS): 
+- **The NHS Community Health Survey Experiences Thematic Analysis, 
+- **NHS Hospital Waiting Experience Survey (Jan–Mar 2025, n=11,890), 
+- **Personal Wellbeing by Borough, and Non-Seasonally Adjusted Quarterly Estimates of Personal Wellbeing
+
+Supporting datasets used to calibrate coordination failure thresholds, set patient experience distributions, and quantify the wellbeing-to-workforce-inactivity economic chain that connects this project to the Economic Systems track alongside Public Services.
+
 ## Why the DGX Spark (GB10)
 
 - **Privacy by design.** NHS patient data is processed entirely on‑device; nothing is sent to a cloud LLM. This is the only way the data‑governance argument (DPA 2018, Caldicott, DSP Toolkit) holds.
