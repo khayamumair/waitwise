@@ -4,6 +4,8 @@
 
 NVIDIA Hack For Impact · London Tech Week 2026 · Track: **Public Services**
 
+https://github.com/user-attachments/assets/9ca24dfe-ee13-4a11-875f-9602ba21a764
+
 ---
 
 ## The problem
@@ -164,9 +166,5 @@ Supporting datasets used to calibrate coordination failure thresholds, set patie
 waitwise-backend/    FastAPI + LangGraph pipeline, DuckDB, ChromaDB, voice endpoints, data/
 waitwise-frontend/   React dashboard (Overview / Coordinator / GP triage / Audit trail)
 ```
-## Video Demo
-
-https://github.com/user-attachments/assets/9ca24dfe-ee13-4a11-875f-9602ba21a764
-
 
 > Clinician‑in‑the‑loop by design: WaitWise surfaces recommendations for human review and approval — it does not make clinical decisions.
