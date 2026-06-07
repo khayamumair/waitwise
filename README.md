@@ -68,6 +68,10 @@ flowchart LR
 
 ---
 
+![WaitWise Architecture](waitwise_architecture_v2.svg)
+
+---
+
 ## Quick start
 
 ### Prerequisites
