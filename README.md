@@ -1,8 +1,8 @@
-# WaitWise
+# WaitWise - NVIDIA London Hack for Impact Winners 2026
 
 **An agentic coordination layer for NHS elective waiting lists. It reads an entire waiting list, finds the patients slipping through coordination gaps, triages them on a locally-hosted NVIDIA Nemotron model, drafts clinician-ready referrals, and even phones patients with an autonomous voice agent — all on a DGX Spark, with zero patient data leaving the device.**
 
-NVIDIA Hack For Impact · London Tech Week 2026 · Track: **Public Services**
+NVIDIA Hack For Impact · London Tech Week 2026 · Track: **Public Services** - Winneer of Eleven Labs Bounty and Public Services Track
 
 https://github.com/user-attachments/assets/9ca24dfe-ee13-4a11-875f-9602ba21a764
 
