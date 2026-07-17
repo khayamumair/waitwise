@@ -18,14 +18,14 @@ This loads all CSVs into DuckDB and embeds the RAG knowledge base into ChromaDB.
 python -m uvicorn api:app --reload --port 8080
 ```
 
-**On DGX Spark with real Nemotron:**
+**With real Nemotron on the DGX Spark:**
 ```bash
-# First start vLLM in a separate terminal:
-# vllm serve nvidia/Nemotron-Mini-4B-Instruct --port 8000
+# First start vLLM on the DGX (separate terminal):
+# vllm serve nvidia/Nemotron-Mini-4B-Instruct --port 8000 --host 0.0.0.0
 
-# Then in agents/triage.py and agents/communication.py, set:
-# MOCK_LLM = False
-
+export WAITWISE_LLM=nemotron
+export VLLM_BASE_URL=http://<DGX-IP>:8000/v1
+export VLLM_MODEL=nvidia/Nemotron-Mini-4B-Instruct
 python -m uvicorn api:app --port 8080
 ```
 
@@ -42,7 +42,7 @@ Triggers the full agent pipeline. Returns immediately — pipeline runs in backg
 
 **Request body:**
 ```json
-{ "coordinator_id": "COORD001" }
+{ "coordinator_id": "CO001" }
 ```
 
 **Response:**
@@ -52,7 +52,7 @@ Triggers the full agent pipeline. Returns immediately — pipeline runs in backg
 
 **What to do:** save the `scan_run_id`, then immediately open the `/stream/{id}` connection.
 
-**Valid coordinator IDs:** `COORD001` (Sarah Obinna), `COORD002` (James Whitfield)
+**Valid coordinator IDs:** `CO001` (Sarah Mensah), `CO002` (Tom Bradley) — see `data/coordinators.csv`
 
 ---
 
@@ -146,7 +146,7 @@ Coordinator approves a recommendation. Sets `coordinator_approved = true` and ma
 
 **Request body:**
 ```json
-{ "coordinator_id": "COORD001" }
+{ "coordinator_id": "CO001" }
 ```
 
 **Response:**
@@ -187,9 +187,12 @@ waitwise/
 
 ## Switching from mock to real LLM
 
-In `agents/triage.py` and `agents/communication.py`, change:
-```python
-MOCK_LLM = True   # ← flip this to False on the DGX Spark
+Serving is controlled entirely by environment variables (see `llm_config.py`):
+
+```bash
+WAITWISE_LLM=mock      # default — deterministic, no GPU needed
+WAITWISE_LLM=nemotron  # vLLM/NIM on the DGX Spark (set VLLM_BASE_URL / VLLM_MODEL)
+WAITWISE_LLM=ollama    # local llama3.2 via Ollama (dev fallback)
 ```
 
-Everything else stays the same. The API response shape is identical.
+No code edits needed. The API response shape is identical in all modes.

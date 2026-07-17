@@ -4,7 +4,8 @@ const REPO = "https://github.com/khayamumair/waitwise";
 const DEMO = "https://github.com/user-attachments/assets/9ca24dfe-ee13-4a11-875f-9602ba21a764";
 const GOV = "https://www.gov.uk/government/news/new-backing-for-open-source-ai-builders-data-centre-design-challenge-and-robotics-partnership";
 const LINKEDIN = "https://www.linkedin.com/feed/update/urn:li:activity:7472927014358925312";
-const CONTACT = "mailto:hello@waitwise.health"; // TODO: swap for your real contact address
+const CONTACT_EMAIL = "khayamumair@gmail.com"; // TODO: swap for hello@waitwise.co.uk once the domain is registered
+const CONTACT = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("WaitWise enquiry")}`;
 
 const asset = (p) => `${import.meta.env.BASE_URL}${p}`;
 
@@ -71,24 +72,45 @@ function LogoItem({ item }) {
 function Wordmark({ dark }) {
   return (
     <span className="brand" style={dark ? { color: "#fff" } : undefined}>
-      waitwise<sup>®</sup>
+      waitwise
     </span>
   );
 }
 
+const NAV_LINKS = [
+  ["#problem", "The problem"],
+  ["#how", "How it works"],
+  ["#recognition", "Recognition"],
+  ["#demo", "Demo"],
+];
+
 function Nav() {
+  const [open, setOpen] = React.useState(false);
   return (
     <header className="nav">
       <div className="wrap nav-inner">
         <Wordmark />
         <nav className="nav-links">
-          <a href="#problem">The problem</a>
-          <a href="#how">How it works</a>
-          <a href="#recognition">Recognition</a>
-          <a href="#demo">Demo</a>
+          {NAV_LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
           <a className="btn btn-primary" href={CONTACT}>Get in touch</a>
+          <button
+            className="nav-toggle"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
         </nav>
       </div>
+      {open && (
+        <nav className="nav-mobile" onClick={() => setOpen(false)}>
+          {NAV_LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
+          <a href={CONTACT}>Get in touch</a>
+        </nav>
+      )}
     </header>
   );
 }
@@ -98,7 +120,7 @@ function Hero() {
     <section className="hero">
       <div className="wrap hero-grid">
         <div>
-          <span className="eyebrow">Backed by the UK Government and NVIDIA</span>
+          <span className="eyebrow">Supported by the UK Government, NVIDIA, ElevenLabs and Mozilla</span>
           <h1>Nobody should fall through the cracks of an <em>NHS waiting list.</em></h1>
           <p className="lead">
             WaitWise reads an entire elective waiting list, finds the patients slipping
@@ -287,7 +309,7 @@ function Why() {
             <div className="feat" key={i}><span className="tick"><Check /></span><div><h3>{t}</h3><p>{d}</p></div></div>
           ))}
         </div>
-        <div className="arch"><img src={asset("architecture.svg")} alt="WaitWise architecture" /></div>
+        <div className="arch"><img src={asset("architecture.svg")} alt="WaitWise architecture diagram: dashboard and pipeline run on-premises, the model runs on an NVIDIA DGX Spark" loading="lazy" /></div>
       </div>
     </section>
   );
@@ -299,7 +321,7 @@ function Photo({ file, name, sub }) {
     <figure className="photo" style={{ margin: 0 }}>
       {failed
         ? <div className="ph">Save the photo as<br /><code>landing/public/{file}</code></div>
-        : <img src={asset(file)} alt={name} onError={() => setFailed(true)} />}
+        : <img src={asset(file)} alt={name} loading="lazy" onError={() => setFailed(true)} />}
       <figcaption className="cap"><b>{name}</b><span>{sub}</span></figcaption>
     </figure>
   );
@@ -346,8 +368,17 @@ function Footer() {
           <div className="right">
             <h4>Start a conversation</h4>
             <p style={{ color: "#aeb4bd" }}>NHS partners, pilots and collaborators welcome.</p>
-            <form className="contact" onSubmit={(e) => { e.preventDefault(); window.location.href = CONTACT; }}>
-              <input type="email" placeholder="Your email" aria-label="Your email" />
+            <form
+              className="contact"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const from = new FormData(e.currentTarget).get("email") || "";
+                const subject = encodeURIComponent("WaitWise enquiry");
+                const body = encodeURIComponent(`Hi WaitWise team,\n\n\n\nReply to: ${from}`);
+                window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+              }}
+            >
+              <input type="email" name="email" required placeholder="Your email" aria-label="Your email" />
               <button className="btn btn-primary" type="submit">Send</button>
             </form>
             <div className="links">

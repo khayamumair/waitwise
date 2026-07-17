@@ -93,6 +93,6 @@ Cases are ordered by `risk_score` descending — highest risk first.
 - CORS is wide open (`allow_origins=["*"]`) — no proxy config needed
 - Server runs on **port 8080**: `python -m uvicorn api:app --reload --port 8080`
 - Mock LLM/GPU are on by default — everything works without GPU hardware
-- To use a real LLM: set `MOCK_LLM = False` in `agents/triage.py` and `agents/communication.py`
+- To use a real LLM: set `WAITWISE_LLM=nemotron` (+ `VLLM_BASE_URL`/`VLLM_MODEL`) — see `llm_config.py`
 - Poll `/gpu` every 2 seconds for the live GPU counter widget
 - On `/approve` success: update the patient card to "Approved" state and disable the approve button

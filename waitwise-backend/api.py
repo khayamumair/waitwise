@@ -51,7 +51,7 @@ _executor = ThreadPoolExecutor(max_workers=2)
 # ---------- Models ----------
 
 class ScanRequest(BaseModel):
-    coordinator_id: str = "COORD001"
+    coordinator_id: str = "CO001"
 
 class ApproveRequest(BaseModel):
     coordinator_id: str
@@ -244,17 +244,16 @@ def approve(triage_id: str, req: ApproveRequest):
 
     # Verify triage record exists
     existing = con.execute(
-        "SELECT triage_id FROM triage_results WHERE triage_id = ?", [triage_id]
+        "SELECT scan_run_id, patient_id FROM triage_results WHERE triage_id = ?", [triage_id]
     ).fetchone()
     if not existing:
         con.close()
         raise HTTPException(status_code=404, detail="Triage record not found")
 
-    # Mark communications as approved
+    # Mark this patient's communications (for this scan) as approved
     con.execute(
-        "UPDATE communications SET status = 'approved' WHERE scan_run_id = ("
-        "SELECT scan_run_id FROM triage_results WHERE triage_id = ?)",
-        [triage_id]
+        "UPDATE communications SET status = 'approved' WHERE scan_run_id = ? AND patient_id = ?",
+        [existing[0], existing[1]]
     )
     con.close()
     _record_audit({"actor": req.coordinator_id, "action": "approve", "triage_id": triage_id,

@@ -27,6 +27,7 @@
 
 *{ box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
+html, body{ overflow-x:clip; }
 body{
   margin:0;
   font-family:var(--body);
@@ -35,6 +36,11 @@ body{
   line-height:1.62;
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
+}
+:focus-visible{ outline:2px solid var(--brand); outline-offset:3px; border-radius:4px; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *, *::before, *::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
 h1,h2,h3,h4{ font-family:var(--head); color:var(--ink); margin:0 0 .5em; line-height:1.14; letter-spacing:-.02em; font-weight:500; }
 h1{ font-size:clamp(2.4rem, 5vw, 3.9rem); font-weight:500; }
@@ -46,6 +52,10 @@ a:hover{ color:var(--brand-strong); }
 img{ max-width:100%; display:block; }
 .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 28px; }
 section{ padding:104px 0; }
+@media (max-width:720px){
+  .wrap{ padding:0 20px; }
+  section{ padding:64px 0; }
+}
 
 /* ---------- shared ---------- */
 .eyebrow{ font-family:var(--head); font-weight:500; font-size:.95rem; color:var(--brand); letter-spacing:0; }
@@ -85,7 +95,17 @@ section{ padding:104px 0; }
 .nav-links a:not(.btn){ color:var(--ink); font-family:var(--head); font-weight:500; font-size:.98rem; }
 .nav-links a:not(.btn):hover{ color:var(--brand); }
 .nav-links .btn{ padding:12px 26px; }
-@media (max-width:880px){ .nav-links a:not(.btn){ display:none; } }
+.nav-toggle{ display:none; background:none; border:0; padding:8px; margin:-8px -4px -8px 0; color:var(--ink); cursor:pointer; }
+.nav-toggle svg{ width:24px; height:24px; display:block; }
+.nav-mobile{ display:none; }
+@media (max-width:880px){
+  .nav-links a:not(.btn){ display:none; }
+  .nav-links{ gap:14px; }
+  .nav-toggle{ display:block; }
+  .nav-mobile{ display:flex; flex-direction:column; background:#fff; border-bottom:1px solid var(--border); padding:8px 20px 16px; }
+  .nav-mobile a{ padding:12px 4px; color:var(--ink); font-family:var(--head); font-weight:500; font-size:1.02rem; border-bottom:1px solid var(--border); }
+  .nav-mobile a:last-child{ border-bottom:0; color:var(--brand); }
+}
 
 /* ---------- hero ---------- */
 .hero .wrap{ padding-top:70px; padding-bottom:96px; }
@@ -138,13 +158,14 @@ section{ padding:104px 0; }
 
 /* stat cards */
 .stat{ background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:34px; }
-.stat .v{ font-family:var(--head); font-size:3rem; font-weight:500; color:var(--brand); line-height:1; letter-spacing:-.03em; }
+.stat .v{ font-family:var(--head); font-size:clamp(2.3rem, 6vw, 3rem); font-weight:500; color:var(--brand); line-height:1; letter-spacing:-.03em; }
 .stat .k{ color:var(--ink-2); margin-top:14px; font-size:1rem; }
 
 /* ---------- dark band ---------- */
 .band{ background:var(--charcoal); color:#cfd3d8; border-radius:32px; overflow:hidden; }
 .band .inner{ display:grid; grid-template-columns:1fr 1.05fr; gap:52px; align-items:center; padding:56px; }
 @media (max-width:960px){ .band .inner{ grid-template-columns:1fr; gap:34px; padding:38px; } }
+@media (max-width:600px){ .band{ border-radius:20px; } .band .inner{ padding:26px 22px; } }
 .band h2{ color:#fff; }
 .band .eyebrow{ color:#8ea2ff; }
 .band p{ color:#aeb4bd; }
@@ -196,7 +217,8 @@ footer .cols{ display:grid; grid-template-columns:1.3fr 1fr; gap:56px; align-ite
 footer .brand{ color:#fff; margin-bottom:22px; }
 footer h2{ color:#fff; font-size:clamp(2rem,3.4vw,2.8rem); max-width:14ch; }
 footer .right h4{ font-family:var(--head); color:#fff; font-weight:600; font-size:1.35rem; margin-bottom:8px; }
-footer .contact{ display:flex; gap:10px; margin:18px 0 34px; max-width:440px; }
+footer .contact{ display:flex; gap:10px; margin:18px 0 34px; max-width:440px; flex-wrap:wrap; }
+footer .contact input{ min-width:200px; }
 footer .contact input{ flex:1; background:#fff; border:0; border-radius:999px; padding:15px 22px; font-family:var(--body); font-size:.98rem; color:var(--ink); }
 footer .contact .btn{ padding:14px 26px; }
 footer .links{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }

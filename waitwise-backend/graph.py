@@ -46,7 +46,7 @@ def build_graph():
 
 
 def run_pipeline(
-    coordinator_id: str = "COORD001",
+    coordinator_id: str = "CO001",
     scan_id: str = None,
     event_queue: list = None,
 ) -> dict:
