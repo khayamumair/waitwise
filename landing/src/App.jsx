@@ -45,12 +45,13 @@ const logos = [
   { txt: "Hack for Impact", sub: "London Tech Week 2026" },
 ];
 
-const loop = [
-  ["scan", "Read the whole list", "It ingests the entire waiting list, not a sample."],
-  ["flag", "Surface who is at risk", "Auditable rules flag the patients quietly falling behind."],
-  ["pulse", "Assess and prioritise", "Every case is triaged against current NHS guidance."],
-  ["mail", "Draft the outreach", "A referral memo and a patient letter, ready for review."],
-  ["shield", "A human decides", "A coordinator or GP approves every action. Always."],
+// [icon, title, resting description, running label, result stat]
+const DEMO_STEPS = [
+  ["scan", "Read the whole list", "It ingests the entire waiting list, not a sample.", "Scanning patient records…", "10,003 scanned"],
+  ["flag", "Surface who is at risk", "Auditable rules flag the patients quietly falling behind.", "Applying auditable rules…", "1,240 flagged"],
+  ["pulse", "Assess and prioritise", "Every case is triaged against current NHS guidance.", "RAG + Nemotron triage…", "302 high-risk"],
+  ["mail", "Draft the outreach", "A referral memo and a patient letter, ready for review.", "Drafting memo + letter…", "27 drafts ready"],
+  ["shield", "A human decides", "A coordinator or GP approves every action. Always.", "Routing for approval…", "Queued for review"],
 ];
 
 const services = [
@@ -60,6 +61,94 @@ const services = [
 ];
 
 function Check() { return <Icon name="check" />; }
+
+function Spinner() { return <span className="spinner" aria-hidden="true" />; }
+
+/* Interactive hero demo: press "Run a live scan" and the pipeline steps through
+   with spinners, per-stage result counts, and a sample drafted output. All
+   simulated client-side — deterministic numbers mirror the mock backend. */
+function LoopDemo() {
+  const [phase, setPhase] = React.useState("idle"); // idle | running | done
+  const [active, setActive] = React.useState(-1);
+  const [done, setDone] = React.useState(-1);
+  const timers = React.useRef([]);
+
+  const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = []; };
+  React.useEffect(() => clearAll, []);
+
+  const run = () => {
+    clearAll();
+    setPhase("running"); setActive(0); setDone(-1);
+    let t = 700;
+    DEMO_STEPS.forEach((_, i) => {
+      timers.current.push(setTimeout(() => setActive(i), t - 700));
+      timers.current.push(setTimeout(() => setDone(i), t));
+      t += 950;
+    });
+    timers.current.push(setTimeout(() => { setActive(-1); setPhase("done"); }, t - 700));
+  };
+
+  const reset = () => { clearAll(); setPhase("idle"); setActive(-1); setDone(-1); };
+
+  return (
+    <aside className="hero-card">
+      <div className="hero-card-head">
+        <span className="cap">{phase === "idle" ? "How the loop works" : "Live scan · demo"}</span>
+        <span className="live"><i></i> On-device</span>
+      </div>
+      <ol className="loop">
+        {DEMO_STEPS.map(([ic, title, desc, running, result], i) => {
+          const state = i <= done ? "done" : i === active ? "running" : "pending";
+          return (
+            <li className={`loop-step is-${state}`} key={i}>
+              <span className="dot">
+                {state === "done" ? <Icon name="check" />
+                  : state === "running" ? <Spinner />
+                  : <Icon name={ic} />}
+              </span>
+              <div className="loop-body">
+                <b>{title}</b>
+                <span>{state === "running" ? running : desc}</span>
+              </div>
+              <span className="step-n">
+                {state === "done" ? <em className="res">{result}</em>
+                  : state === "running" ? <em className="dots">···</em>
+                  : String(i + 1).padStart(2, "0")}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      {phase === "done" && (
+        <div className="demo-result">
+          <div className="demo-patient">
+            <div className="dp-id">
+              <b>Ava Cooper</b>
+              <span>P0119 · Cardiology · 120-week wait · Tower Hamlets</span>
+            </div>
+            <span className="dp-risk">HIGH · 0.92</span>
+          </div>
+          <p className="demo-letter">
+            “Dear Ava, we're writing about your NHS waiting list status for cardiology.
+            A coordinator will be in touch within the next few days to discuss next steps…”
+          </p>
+          <div className="demo-foot"><Icon name="check" /> Drafted by WaitWise — a coordinator approves before anything is sent</div>
+        </div>
+      )}
+
+      <button
+        className="demo-btn"
+        onClick={phase === "done" ? reset : run}
+        disabled={phase === "running"}
+      >
+        {phase === "idle" && <><Icon name="play" /> Run a live scan</>}
+        {phase === "running" && <><Spinner /> Scanning…</>}
+        {phase === "done" && <>Run it again</>}
+      </button>
+    </aside>
+  );
+}
 
 function LogoItem({ item }) {
   return (
@@ -142,21 +231,7 @@ function Hero() {
             <li><Check /> A clinician approves every action</li>
           </ul>
         </div>
-        <aside className="hero-card">
-          <div className="hero-card-head">
-            <span className="cap">How the loop works</span>
-            <span className="live"><i></i> On-device</span>
-          </div>
-          <ol className="loop">
-            {loop.map(([ic, t, d], i) => (
-              <li className="loop-step" key={i}>
-                <span className="dot"><Icon name={ic} /></span>
-                <div className="loop-body"><b>{t}</b><span>{d}</span></div>
-                <span className="step-n">{String(i + 1).padStart(2, "0")}</span>
-              </li>
-            ))}
-          </ol>
-        </aside>
+        <LoopDemo />
       </div>
     </section>
   );
