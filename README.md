@@ -1,6 +1,6 @@
 # WaitWise - NVIDIA London Hack for Impact Winners 2026
 
-**An agentic coordination layer for NHS elective waiting lists. It reads an entire waiting list, finds the patients slipping through coordination gaps, triages them on a locally-hosted NVIDIA Nemotron model, drafts clinician-ready referrals, and even phones patients with an autonomous voice agent — all on a DGX Spark, with zero patient data leaving the device.**
+**An agentic coordination layer for NHS elective waiting lists. It reads an entire waiting list, finds the patients slipping through coordination gaps, triages them on a locally-hosted NVIDIA Nemotron model, drafts clinician-ready referrals, and even phones patients with an autonomous voice agent, all on a DGX Spark, with zero patient data leaving the device.**
 
 NVIDIA Hack For Impact · London Tech Week 2026 · Track: **Public Services** - Winners of Eleven Labs Bounty and Public Services Track
 
@@ -78,9 +78,9 @@ flowchart LR
 
 ### Prerequisites
 - Python 3.12 + the backend venv (`pip install -r requirements.txt`), Node 18+ for the frontend.
-- A DGX Spark serving Nemotron via vLLM **(optional — a deterministic mock runs the whole app with no GPU).**
+- A DGX Spark serving Nemotron via vLLM **(optional, a deterministic mock runs the whole app with no GPU).**
 
-### Option 1 — Local, no GPU (mock model)
+### Option 1: Local, no GPU (mock model)
 ```bash
 # Backend
 cd waitwise-backend
@@ -92,7 +92,7 @@ npm install && npm run dev      # http://localhost:5173
 ```
 Open the app, go to **Coordinator**, press **Start scan**. Completes in ~4s.
 
-### Option 2 — Real Nemotron on the DGX Spark
+### Option 2: Real Nemotron on the DGX Spark
 ```bash
 # On the DGX (leave running):
 source ~/vllm-env/bin/activate
@@ -132,7 +132,7 @@ See [`waitwise-backend`](waitwise-backend/) endpoints `/voice/next-patient`, `/v
 
 ## Data & provenance
 
-All data is **synthetic** — no real patient information. The `waitwise-backend/data/` directory holds **17 CSV tables / ~10,003 patients** modelling the real NHS structure: the two‑queue e‑RS → PTL pathway, RTT 18/52‑week clocks, IMD deprivation quintiles, London borough deprivation/wellbeing, pathway events (referrals, pathway changes, DNAs), contact history, and a 12‑doc NHS guidance corpus for RAG. It was engineered to reproduce realistic distributions (1,240 flagged, 302 high‑risk band, 5,482 never contacted, 5,344 voice‑suitable) plus planted edge cases and three "hero" patients for the demo. Statistics quoted in the UI (7.11M waiting, 65.3% within 18 weeks, 2× deprivation gap) are from NHS England / ONS / King's Fund and cited in‑app.
+All data is **synthetic**, no real patient information. The `waitwise-backend/data/` directory holds **17 CSV tables / ~10,003 patients** modelling the real NHS structure: the two‑queue e‑RS → PTL pathway, RTT 18/52‑week clocks, IMD deprivation quintiles, London borough deprivation/wellbeing, pathway events (referrals, pathway changes, DNAs), contact history, and a 12‑doc NHS guidance corpus for RAG. It was engineered to reproduce realistic distributions (1,240 flagged, 302 high‑risk band, 5,482 never contacted, 5,344 voice‑suitable) plus planted edge cases and three "hero" patients for the demo. Statistics quoted in the UI (7.11M waiting, 65.3% within 18 weeks, 2× deprivation gap) are from NHS England / ONS / King's Fund and cited in‑app.
 
 ## Data grounding uses six open datasets:
 From the City of London: 
@@ -158,7 +158,7 @@ Supporting datasets used to calibrate coordination failure thresholds, set patie
 - **Small‑model context.** Nemotron‑Mini‑4B has a 4,096‑token window and unreliable structured/multi‑tool output, so the voice agent uses a post‑call webhook rather than in‑call tool calling.
 - **GPU telemetry.** When the backend runs on the laptop, the panel scrapes vLLM `/metrics` for real DGX activity; running the backend on the Spark itself gives true `pynvml` device utilisation.
 - **Escalation queue** is in‑session app state (not yet persisted); the **audit trail** is in‑memory + JSONL.
-- **Real deployment** would integrate via NHS e‑RS / GP Connect FHIR APIs and trust PTL warehouses, under DCB0129/0160, DTAC and DSPT — WaitWise is designed as a read‑and‑recommend overlay, never an automated decision‑maker.
+- **Real deployment** would integrate via NHS e‑RS / GP Connect FHIR APIs and trust PTL warehouses, under DCB0129/0160, DTAC and DSPT, WaitWise is designed as a read‑and‑recommend overlay, never an automated decision‑maker.
 - **Roadmap:** NIM serving + a larger Nemotron for the unified‑memory story, NeMo Retriever reranking, persisted escalation/audit, richer RTT rules, and a borough‑level analytics panel.
 
 ## Repo layout
@@ -167,4 +167,4 @@ waitwise-backend/    FastAPI + LangGraph pipeline, DuckDB, ChromaDB, voice endpo
 waitwise-frontend/   React dashboard (Overview / Coordinator / GP triage / Audit trail)
 ```
 
-> Clinician‑in‑the‑loop by design: WaitWise surfaces recommendations for human review and approval — it does not make clinical decisions.
+> Clinician‑in‑the‑loop by design: WaitWise surfaces recommendations for human review and approval, it does not make clinical decisions.

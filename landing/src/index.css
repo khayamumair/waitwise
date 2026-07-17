@@ -1,5 +1,5 @@
 /* ============================================================
-   WaitWise landing — themed to a clean medical template look.
+   WaitWise landing: themed to a clean medical template look.
    All colours live in these variables so the palette can be
    retuned in one place.
    ============================================================ */
@@ -122,7 +122,7 @@ section{ padding:104px 0; }
 .hero-trust .award{ display:inline-flex; color:#f5a623; }
 .hero-trust .award svg{ width:17px; height:17px; }
 
-/* hero visual card — connected timeline */
+/* hero visual card: connected timeline */
 .hero-card{ background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px; }
 .hero-card-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:22px; }
 .hero-card .cap{ font-family:var(--head); font-size:.72rem; text-transform:uppercase; letter-spacing:.14em; color:var(--ink-3); }
@@ -161,7 +161,8 @@ section{ padding:104px 0; }
 .demo-patient{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .dp-id b{ font-family:var(--head); font-weight:500; color:var(--ink); display:block; font-size:.98rem; }
 .dp-id span{ font-size:.8rem; color:var(--ink-2); }
-.dp-risk{ flex:0 0 auto; font-family:var(--head); font-size:.7rem; font-weight:500; letter-spacing:.04em; color:#fff; background:#e0483b; padding:5px 10px; border-radius:8px; }
+.dp-risk{ flex:0 0 auto; font-family:var(--head); font-size:.7rem; font-weight:500; letter-spacing:.04em; color:#fff; background:#e0483b; padding:5px 10px; border-radius:8px; white-space:nowrap; }
+.dp-risk.medium{ background:#c77700; }
 .demo-letter{ margin:12px 0 10px; font-size:.9rem; color:var(--ink-2); line-height:1.55; font-style:italic; }
 .demo-foot{ display:flex; align-items:flex-start; gap:8px; font-size:.8rem; color:#0c8f6f; font-family:var(--head); font-weight:500; line-height:1.4; }
 .demo-foot svg{ width:15px; height:15px; flex:0 0 auto; margin-top:1px; }

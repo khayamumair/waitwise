@@ -13,7 +13,7 @@ This loads all CSVs into DuckDB and embeds the RAG knowledge base into ChromaDB.
 
 ## Running the server
 
-**Dev mode (no GPU — works on any laptop):**
+**Dev mode (no GPU, works on any laptop):**
 ```bash
 python -m uvicorn api:app --reload --port 8080
 ```
@@ -31,14 +31,14 @@ python -m uvicorn api:app --port 8080
 
 ---
 
-## API Reference — for the frontend developer
+## API Reference: for the frontend developer
 
 Base URL: `http://localhost:8080`
 
 ---
 
 ### POST `/scan`
-Triggers the full agent pipeline. Returns immediately — pipeline runs in background.
+Triggers the full agent pipeline. Returns immediately, pipeline runs in background.
 
 **Request body:**
 ```json
@@ -52,7 +52,7 @@ Triggers the full agent pipeline. Returns immediately — pipeline runs in backg
 
 **What to do:** save the `scan_run_id`, then immediately open the `/stream/{id}` connection.
 
-**Valid coordinator IDs:** `CO001` (Sarah Mensah), `CO002` (Tom Bradley) — see `data/coordinators.csv`
+**Valid coordinator IDs:** `CO001` (Sarah Mensah), `CO002` (Tom Bradley), see `data/coordinators.csv`
 
 ---
 
@@ -82,7 +82,7 @@ es.onmessage = (e) => {
   "agent": "monitor",
   "event_type": "flag",
   "patient_id": "P0119",
-  "message": "FLAGGED: P0119 — score 5, 120wk wait, ever_contacted=False, IMD Q1 Tower Hamlets"
+  "message": "FLAGGED: P0119, score 5, 120wk wait, ever_contacted=False, IMD Q1 Tower Hamlets"
 }
 ```
 
@@ -128,7 +128,7 @@ Returns the full results once the pipeline completes. Call this after the stream
       },
       "communications": {
         "comm_id": "COMM5D43DE",
-        "coordinator_memo": "URGENT — Ava Cooper (P0119)...",
+        "coordinator_memo": "URGENT, Ava Cooper (P0119)...",
         "patient_letter": "Dear Ava,\n\nWe are writing to update you...",
         "sent": false
       }
@@ -137,7 +137,7 @@ Returns the full results once the pipeline completes. Call this after the stream
 }
 ```
 
-**Cases are ordered by `risk_score` descending** — highest risk first.
+**Cases are ordered by `risk_score` descending**, highest risk first.
 
 ---
 
@@ -173,8 +173,8 @@ Returns current GPU utilisation. Poll every 2 seconds for the live counter on sc
 ```
 waitwise/
 ├── data/                    # all mock CSVs (source of truth)
-├── db/waitwise.db           # DuckDB — created by ingest.py
-├── vector_store/            # ChromaDB — created by ingest.py
+├── db/waitwise.db           # DuckDB, created by ingest.py
+├── vector_store/            # ChromaDB, created by ingest.py
 ├── agents/
 │   ├── monitor.py           # SQL-only: scores + ranks patients, returns top 3
 │   ├── triage.py            # RAG retrieval + LLM risk assessment
@@ -190,7 +190,7 @@ waitwise/
 Serving is controlled entirely by environment variables (see `llm_config.py`):
 
 ```bash
-WAITWISE_LLM=mock      # default — deterministic, no GPU needed
+WAITWISE_LLM=mock      # default, deterministic, no GPU needed
 WAITWISE_LLM=nemotron  # vLLM/NIM on the DGX Spark (set VLLM_BASE_URL / VLLM_MODEL)
 WAITWISE_LLM=ollama    # local llama3.2 via Ollama (dev fallback)
 ```

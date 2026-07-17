@@ -45,6 +45,20 @@ const logos = [
   { txt: "Hack for Impact", sub: "London Tech Week 2026" },
 ];
 
+// Sample flagged patients (synthetic). One is picked at random each scan.
+const DEMO_PATIENTS = [
+  { name: "Ava Cooper", id: "P0119", condition: "Cardiology", wait: 120, borough: "Tower Hamlets", level: "high", score: "0.92" },
+  { name: "Marcus Bennett", id: "P0342", condition: "Orthopaedics", wait: 78, borough: "Hackney", level: "high", score: "0.88" },
+  { name: "Priya Nair", id: "P0587", condition: "Gynaecology", wait: 64, borough: "Newham", level: "high", score: "0.85" },
+  { name: "James Okoro", id: "P0771", condition: "ENT", wait: 96, borough: "Barking and Dagenham", level: "high", score: "0.90" },
+  { name: "Elsie Wright", id: "P0918", condition: "Ophthalmology", wait: 58, borough: "Islington", level: "medium", score: "0.63" },
+  { name: "Hassan Ali", id: "P1064", condition: "Urology", wait: 84, borough: "Redbridge", level: "high", score: "0.87" },
+  { name: "Grace Adeyemi", id: "P1230", condition: "Dermatology", wait: 52, borough: "Waltham Forest", level: "medium", score: "0.61" },
+  { name: "Thomas Reid", id: "P1355", condition: "General Surgery", wait: 110, borough: "Haringey", level: "high", score: "0.94" },
+  { name: "Fatima Khan", id: "P1489", condition: "Neurology", wait: 72, borough: "Enfield", level: "high", score: "0.86" },
+  { name: "Daniel Osei", id: "P1601", condition: "Gastroenterology", wait: 66, borough: "Lewisham", level: "high", score: "0.83" },
+];
+
 // [icon, title, resting description, running label, result stat]
 const DEMO_STEPS = [
   ["scan", "Read the whole list", "It ingests the entire waiting list, not a sample.", "Scanning patient records…", "10,003 scanned"],
@@ -66,11 +80,12 @@ function Spinner() { return <span className="spinner" aria-hidden="true" />; }
 
 /* Interactive hero demo: press "Run a live scan" and the pipeline steps through
    with spinners, per-stage result counts, and a sample drafted output. All
-   simulated client-side — deterministic numbers mirror the mock backend. */
+   simulated client-side; deterministic numbers mirror the mock backend. */
 function LoopDemo() {
   const [phase, setPhase] = React.useState("idle"); // idle | running | done
   const [active, setActive] = React.useState(-1);
   const [done, setDone] = React.useState(-1);
+  const [pIdx, setPIdx] = React.useState(0);
   const timers = React.useRef([]);
 
   const clearAll = () => { timers.current.forEach(clearTimeout); timers.current = []; };
@@ -78,14 +93,23 @@ function LoopDemo() {
 
   const run = () => {
     clearAll();
-    setPhase("running"); setActive(0); setDone(-1);
-    let t = 700;
-    DEMO_STEPS.forEach((_, i) => {
-      timers.current.push(setTimeout(() => setActive(i), t - 700));
-      timers.current.push(setTimeout(() => setDone(i), t));
-      t += 950;
+    // Pick a different sample patient each run.
+    setPIdx((prev) => {
+      let n = prev;
+      while (n === prev && DEMO_PATIENTS.length > 1) n = Math.floor(Math.random() * DEMO_PATIENTS.length);
+      return n;
     });
-    timers.current.push(setTimeout(() => { setActive(-1); setPhase("done"); }, t - 700));
+    setPhase("running"); setActive(-1); setDone(-1);
+    let t = 0;
+    DEMO_STEPS.forEach((_, i) => {
+      // Each stage runs for a random 1.1s to 2.3s so the scan feels live, not scripted.
+      const dur = 1100 + Math.random() * 1200;
+      timers.current.push(setTimeout(() => setActive(i), t));
+      t += dur;
+      timers.current.push(setTimeout(() => setDone(i), t));
+      t += 200; // short beat before the next stage starts
+    });
+    timers.current.push(setTimeout(() => { setActive(-1); setPhase("done"); }, t));
   };
 
   const reset = () => { clearAll(); setPhase("idle"); setActive(-1); setDone(-1); };
@@ -120,22 +144,26 @@ function LoopDemo() {
         })}
       </ol>
 
-      {phase === "done" && (
-        <div className="demo-result">
-          <div className="demo-patient">
-            <div className="dp-id">
-              <b>Ava Cooper</b>
-              <span>P0119 · Cardiology · 120-week wait · Tower Hamlets</span>
+      {phase === "done" && (() => {
+        const p = DEMO_PATIENTS[pIdx];
+        const first = p.name.split(" ")[0];
+        return (
+          <div className="demo-result">
+            <div className="demo-patient">
+              <div className="dp-id">
+                <b>{p.name}</b>
+                <span>{p.id} · {p.condition} · {p.wait}-week wait · {p.borough}</span>
+              </div>
+              <span className={`dp-risk ${p.level}`}>{p.level.toUpperCase()} · {p.score}</span>
             </div>
-            <span className="dp-risk">HIGH · 0.92</span>
+            <p className="demo-letter">
+              “Dear {first}, we're writing about your NHS waiting list status for {p.condition.toLowerCase()}.
+              A coordinator will be in touch within the next few days to discuss next steps…”
+            </p>
+            <div className="demo-foot"><Icon name="check" /> Drafted by WaitWise. A coordinator approves before anything is sent.</div>
           </div>
-          <p className="demo-letter">
-            “Dear Ava, we're writing about your NHS waiting list status for cardiology.
-            A coordinator will be in touch within the next few days to discuss next steps…”
-          </p>
-          <div className="demo-foot"><Icon name="check" /> Drafted by WaitWise — a coordinator approves before anything is sent</div>
-        </div>
-      )}
+        );
+      })()}
 
       <button
         className="demo-btn"

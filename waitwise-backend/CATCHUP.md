@@ -1,4 +1,4 @@
-# WaitWise — Frontend Dev Catch-Up
+# WaitWise: Frontend Dev Catch-Up
 
 ## What It Is
 
@@ -10,11 +10,11 @@ An NHS waiting list management tool. A coordinator triggers a scan; three AI age
 
 **3-agent pipeline** wired via LangGraph:
 
-1. **Monitor** (`agents/monitor.py`) — Pure SQL rule engine. Scores all ~500+ patients on risk heuristics (wait length, deprivation quintile, contact history, pathway changes). Returns top 3 worst cases. No LLM.
+1. **Monitor** (`agents/monitor.py`), Pure SQL rule engine. Scores all ~500+ patients on risk heuristics (wait length, deprivation quintile, contact history, pathway changes). Returns top 3 worst cases. No LLM.
 
-2. **Triage** (`agents/triage.py`) — RAG + LLM. Retrieves relevant NHS guidelines from ChromaDB via semantic search, then calls an LLM (Nemotron on DGX Spark, or llama3.2 locally, or a mock) to produce `risk_level`, `risk_score`, `reason`, `recommended_action`.
+2. **Triage** (`agents/triage.py`), RAG + LLM. Retrieves relevant NHS guidelines from ChromaDB via semantic search, then calls an LLM (Nemotron on DGX Spark, or llama3.2 locally, or a mock) to produce `risk_level`, `risk_score`, `reason`, `recommended_action`.
 
-3. **Communication** (`agents/communication.py`) — LLM (or mock). Writes two items per patient: a **clinical memo** for the coordinator and a **compassionate letter** for the patient.
+3. **Communication** (`agents/communication.py`), LLM (or mock). Writes two items per patient: a **clinical memo** for the coordinator and a **compassionate letter** for the patient.
 
 Results are persisted to **DuckDB** at `db/waitwise.db`. Embeddings live in **ChromaDB** at `vector_store/`.
 
@@ -25,7 +25,7 @@ Results are persisted to **DuckDB** at `db/waitwise.db`. Embeddings live in **Ch
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/scan` | Start pipeline; returns `scan_run_id` immediately |
-| `GET` | `/stream/{scan_run_id}` | SSE stream — live reasoning trace as agents run |
+| `GET` | `/stream/{scan_run_id}` | SSE stream, live reasoning trace as agents run |
 | `GET` | `/results/{scan_run_id}` | Full results once `pipeline_complete` event fires |
 | `POST` | `/approve/{triage_id}` | Coordinator approves a case |
 | `GET` | `/gpu` | GPU utilisation for live counter widget |
@@ -56,9 +56,9 @@ When `pipeline_complete` arrives, close the stream and call `/results`.
 
 **Triage result**: `triage_id`, `risk_level` (`high`/`medium`/`low`), `risk_score` (0–1), `reason`, `recommended_action`
 
-**Communications**: Two rows per patient — `type: "coordinator_memo"` (internal clinical brief) and `type: "patient_letter"` (plain-English patient-facing). `status` starts as `"draft"`, becomes `"approved"` after coordinator approves.
+**Communications**: Two rows per patient, `type: "coordinator_memo"` (internal clinical brief) and `type: "patient_letter"` (plain-English patient-facing). `status` starts as `"draft"`, becomes `"approved"` after coordinator approves.
 
-**Coordinators**: `CO001` Sarah Mensah, `CO002` Tom Bradley — use these as `coordinator_id` in requests.
+**Coordinators**: `CO001` Sarah Mensah, `CO002` Tom Bradley, use these as `coordinator_id` in requests.
 
 ---
 
@@ -78,21 +78,21 @@ When `pipeline_complete` arrives, close the stream and call `/results`.
     {
       "patient": { "patient_id": "P0119", "name": "Ava Cooper", "age": 50, "borough": "Tower Hamlets", "condition": "Cardiology", "wait_weeks": 120, "ever_contacted": false, "imd_quintile": 1 },
       "triage": { "triage_id": "TRGCE4A99", "risk_level": "high", "risk_score": 0.92, "reason": "...", "recommended_action": "Flag for urgent clinical review", "coordinator_approved": false },
-      "communications": { "comm_id": "COMM5D43DE", "coordinator_memo": "URGENT — Ava Cooper (P0119)...", "patient_letter": "Dear Ava,\n\nWe are writing...", "sent": false }
+      "communications": { "comm_id": "COMM5D43DE", "coordinator_memo": "URGENT, Ava Cooper (P0119)...", "patient_letter": "Dear Ava,\n\nWe are writing...", "sent": false }
     }
   ]
 }
 ```
 
-Cases are ordered by `risk_score` descending — highest risk first.
+Cases are ordered by `risk_score` descending, highest risk first.
 
 ---
 
 ## Frontend Notes
 
-- CORS is wide open (`allow_origins=["*"]`) — no proxy config needed
+- CORS is wide open (`allow_origins=["*"]`), no proxy config needed
 - Server runs on **port 8080**: `python -m uvicorn api:app --reload --port 8080`
-- Mock LLM/GPU are on by default — everything works without GPU hardware
-- To use a real LLM: set `WAITWISE_LLM=nemotron` (+ `VLLM_BASE_URL`/`VLLM_MODEL`) — see `llm_config.py`
+- Mock LLM/GPU are on by default, everything works without GPU hardware
+- To use a real LLM: set `WAITWISE_LLM=nemotron` (+ `VLLM_BASE_URL`/`VLLM_MODEL`), see `llm_config.py`
 - Poll `/gpu` every 2 seconds for the live GPU counter widget
 - On `/approve` success: update the patient card to "Approved" state and disable the approve button
