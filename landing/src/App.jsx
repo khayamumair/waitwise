@@ -22,6 +22,7 @@ const PATHS = {
   flask: <><path d="M9 3h6" /><path d="M10 3v6l-5.2 9.3A2 2 0 0 0 6.6 21h10.8a2 2 0 0 0 1.8-2.7L14 9V3" /><path d="M7.5 15h9" /></>,
   pulse: <path d="M22 12h-4l-3 8-6-16-3 8H2" />,
   shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></>,
+  star: <path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 18.5 6.1 21.3l1.2-6.6L2.5 9.5l6.6-.9z" fill="currentColor" stroke="none" />,
   heart: <path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7A5 5 0 1 0 3.2 12.7l1.7 1.7L12 21l7.1-6.6 1.7-1.7a5 5 0 0 0 0-7.1z" />,
 };
 
@@ -45,11 +46,11 @@ const logos = [
 ];
 
 const loop = [
-  ["Read the whole list", "It ingests the entire waiting list, not a sample."],
-  ["Surface who is at risk", "Auditable rules flag the patients quietly falling behind."],
-  ["Assess and prioritise", "Every case is triaged against current NHS guidance."],
-  ["Draft the outreach", "A referral memo and a patient letter, ready for review."],
-  ["A human decides", "A coordinator or GP approves every action. Always."],
+  ["scan", "Read the whole list", "It ingests the entire waiting list, not a sample."],
+  ["flag", "Surface who is at risk", "Auditable rules flag the patients quietly falling behind."],
+  ["pulse", "Assess and prioritise", "Every case is triaged against current NHS guidance."],
+  ["mail", "Draft the outreach", "A referral memo and a patient letter, ready for review."],
+  ["shield", "A human decides", "A coordinator or GP approves every action. Always."],
 ];
 
 const services = [
@@ -122,6 +123,14 @@ function Hero() {
         <div>
           <span className="eyebrow">Supported by the UK Government, NVIDIA, ElevenLabs and Mozilla</span>
           <h1>Nobody should fall through the cracks of an <em>NHS waiting list.</em></h1>
+          <div className="hero-trust">
+            <span className="award"><Icon name="star" /></span>
+            Winners at NVIDIA Hack for Impact, London Tech Week 2026
+          </div>
+          <div className="hero-cta">
+            <a className="btn btn-primary" href="#demo"><Icon name="play" /> Watch the demo</a>
+            <a className="btn btn-ghost" href={REPO} target="_blank" rel="noopener">Explore the project</a>
+          </div>
           <p className="lead">
             WaitWise reads an entire elective waiting list, finds the patients slipping
             through the gaps, and prepares reviewed, clinician ready outreach. It runs on
@@ -132,20 +141,21 @@ function Hero() {
             <li><Check /> Surfaces who is quietly falling behind</li>
             <li><Check /> A clinician approves every action</li>
           </ul>
-          <div className="hero-cta">
-            <a className="btn btn-primary" href="#demo"><Icon name="play" /> Watch the demo</a>
-            <a className="btn btn-ghost" href={REPO} target="_blank" rel="noopener">Explore the project</a>
-          </div>
-          <div className="hero-trust">Winners at NVIDIA Hack for Impact, London Tech Week 2026</div>
         </div>
         <aside className="hero-card">
-          <div className="cap">How the loop works</div>
-          {loop.map(([t, d], i) => (
-            <div className="loop-row" key={i}>
-              <span className="n">{i + 1}</span>
-              <p><b>{t}.</b> {d}</p>
-            </div>
-          ))}
+          <div className="hero-card-head">
+            <span className="cap">How the loop works</span>
+            <span className="live"><i></i> On-device</span>
+          </div>
+          <ol className="loop">
+            {loop.map(([ic, t, d], i) => (
+              <li className="loop-step" key={i}>
+                <span className="dot"><Icon name={ic} /></span>
+                <div className="loop-body"><b>{t}</b><span>{d}</span></div>
+                <span className="step-n">{String(i + 1).padStart(2, "0")}</span>
+              </li>
+            ))}
+          </ol>
         </aside>
       </div>
     </section>
