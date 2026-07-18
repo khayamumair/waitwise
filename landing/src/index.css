@@ -112,8 +112,32 @@ section{ padding:104px 0; }
 .hero .wrap{ padding-top:48px; padding-bottom:60px; }
 @media (max-width:720px){ .hero .wrap{ padding-top:28px; padding-bottom:40px; } }
 .hero-grid{ display:grid; grid-template-columns:1.02fr .98fr; gap:64px; align-items:start; }
+.hero-grid > div{ min-width:0; }  /* let the column shrink so long inline content wraps instead of overflowing */
 @media (max-width:960px){ .hero-grid{ grid-template-columns:1fr; gap:44px; } }
 .hero .eyebrow{ display:block; }
+
+/* official "supported by" endorsement badge */
+.hero-badge{
+  display:inline-flex; align-items:center; gap:9px;
+  max-width:100%;
+  padding:6px 15px 6px 6px;
+  border-radius:999px;
+  background:linear-gradient(180deg,#fff, var(--brand-soft));
+  border:1px solid var(--border-2);
+  box-shadow:0 6px 18px -12px rgba(20,34,90,.45);
+  font-family:var(--head); font-weight:400; font-size:.86rem; color:var(--ink-2);
+  line-height:1.35;
+}
+.hero-badge b{ font-weight:500; color:var(--ink); }
+.hero-badge-ic{
+  flex:0 0 auto; width:26px; height:26px; border-radius:50%;
+  background:var(--brand); color:#fff; display:grid; place-items:center;
+  box-shadow:0 0 0 3px rgba(43,71,234,.14);
+}
+.hero-badge-ic svg{ width:14px; height:14px; }
+@media (max-width:520px){
+  .hero-badge{ font-size:.8rem; align-items:flex-start; padding:8px 14px 8px 8px; }
+}
 .hero h1{ margin:14px 0 16px; }
 .hero h1 em{ font-style:normal; color:var(--brand); }
 .hero .lead{ font-size:1.2rem; margin-top:28px; }
@@ -257,7 +281,8 @@ section{ padding:104px 0; }
 
 /* ---------- footer (dark) ---------- */
 footer{ background:var(--charcoal); color:#aab0b8; }
-footer .top{ padding:84px 0 64px; }
+footer .top{ padding-top:84px; padding-bottom:64px; }  /* vertical only; .wrap supplies the side padding */
+@media (max-width:720px){ footer .top{ padding-top:56px; padding-bottom:44px; } }
 footer .cols{ display:grid; grid-template-columns:1.3fr 1fr; gap:56px; align-items:start; }
 @media (max-width:860px){ footer .cols{ grid-template-columns:1fr; gap:40px; } }
 footer .brand{ color:#fff; margin-bottom:22px; }

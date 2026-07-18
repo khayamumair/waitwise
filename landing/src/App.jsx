@@ -238,7 +238,10 @@ function Hero() {
     <section className="hero">
       <div className="wrap hero-grid">
         <div>
-          <span className="eyebrow">Supported by the UK Government, NVIDIA, ElevenLabs and Mozilla</span>
+          <span className="hero-badge">
+            <span className="hero-badge-ic"><Icon name="shield" /></span>
+            <span>Supported by the <b>UK Government</b>, NVIDIA, ElevenLabs &amp; Mozilla</span>
+          </span>
           <h1>Nobody should fall through the cracks of an <em>NHS waiting list.</em></h1>
           <div className="hero-trust">
             <span className="award"><Icon name="star" /></span>
