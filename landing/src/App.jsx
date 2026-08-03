@@ -4,7 +4,7 @@ const REPO = "https://github.com/khayamumair/waitwise";
 const DEMO = "https://github.com/user-attachments/assets/9ca24dfe-ee13-4a11-875f-9602ba21a764";
 const GOV = "https://www.gov.uk/government/news/new-backing-for-open-source-ai-builders-data-centre-design-challenge-and-robotics-partnership";
 const LINKEDIN = "https://www.linkedin.com/feed/update/urn:li:activity:7472927014358925312";
-const CONTACT_EMAIL = "khayamumair@gmail.com"; // TODO: swap for hello@waitwise.co.uk once the domain is registered
+const CONTACT_EMAIL = "info@waitwise.co.uk";
 const CONTACT = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("WaitWise enquiry")}`;
 
 const asset = (p) => `${import.meta.env.BASE_URL}${p}`;
