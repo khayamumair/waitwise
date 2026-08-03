@@ -190,7 +190,7 @@ function LogoItem({ item }) {
 function Wordmark({ dark }) {
   return (
     <span className="brand" style={dark ? { color: "#fff" } : undefined}>
-      waitwise
+      WaitWise
     </span>
   );
 }
